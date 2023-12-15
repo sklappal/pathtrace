@@ -14,6 +14,7 @@ type PageComponentType = {
 };
 
 export const pages: PageComponentType = {
+  raytrace: dynamic(() => import('../../sample/raytrace/main')),
   helloTriangle: dynamic(() => import('../../sample/helloTriangle/main')),
   helloTriangleMSAA: dynamic(
     () => import('../../sample/helloTriangleMSAA/main')

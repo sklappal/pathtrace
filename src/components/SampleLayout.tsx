@@ -227,7 +227,7 @@ const SampleLayout: React.FunctionComponent<
         ></div>
         <canvas ref={canvasRef}></canvas>
       </div>
-      <div>
+      {/* <div>
         <nav className={styles.sourceFileNav}>
           <ul>
             {sources.map((src, i) => {
@@ -256,7 +256,7 @@ const SampleLayout: React.FunctionComponent<
             />
           );
         })}
-      </div>
+      </div> */}
     </main>
   );
 };
