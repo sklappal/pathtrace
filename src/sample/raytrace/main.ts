@@ -110,7 +110,12 @@ const init: SampleInit = async ({ canvas, pageState, gui }) => {
   });
 
   const paramsBuffer = device.createBuffer({
-    size: 8,
+    size: 32,
+    usage: GPUBufferUsage.COPY_DST | GPUBufferUsage.UNIFORM,
+  });
+
+  const viewMatrixBuffer = device.createBuffer({
+    size: 4*16,
     usage: GPUBufferUsage.COPY_DST | GPUBufferUsage.UNIFORM,
   });
 
@@ -126,23 +131,23 @@ const init: SampleInit = async ({ canvas, pageState, gui }) => {
       GPUTextureUsage.TEXTURE_BINDING,
   })
 
-  const computeConstants = device.createBindGroup({
+  const computeBindGroup = device.createBindGroup({
     layout: raytracePipeline.getBindGroupLayout(0),
     entries: [
       {
-        binding: 1,
+        binding: 0,
         resource: {
           buffer: paramsBuffer,
-        },
-      }
-    ],
-  });
-
-  const computeBindGroup0 = device.createBindGroup({
-    layout: raytracePipeline.getBindGroupLayout(1),
-    entries: [
+        }
+      },
       {
-        binding: 3,
+        binding: 1,
+        resource: {
+          buffer: viewMatrixBuffer,
+        }
+      },
+      {
+        binding: 2,
         resource: texture.createView(),
       }
     ],
@@ -166,36 +171,92 @@ const init: SampleInit = async ({ canvas, pageState, gui }) => {
   const params = {
     textureWidth: srcWidth,
     textureHeight: srcHeight,
+    fov: 80.0,
+    samplesPerPixel: 100,
+    cameraPositionX: 0.0,
+    cameraPositionY: 0.0,
+    cameraPositionZ: 0.0
   };
 
-  
+
+  const viewMatrix =
+    [1.0, 0.0, 0.0, 0.0,
+      0.0, 1.0, 0.0, 0.0,
+      0.0, 0.0, -1.0, 0.0,
+      0.0, 0.0, 0.0, 0.0];
+
   device.queue.writeBuffer(
-    paramsBuffer,
+    viewMatrixBuffer,
     0,
-    new Float32Array([params.textureWidth, params.textureHeight])
+    new Float32Array(viewMatrix)
   );
-  
+
+  const updateParams = () => {
+    device.queue.writeBuffer(
+      paramsBuffer,
+      0,
+      new Float32Array([
+        params.textureWidth, 
+        params.textureHeight, 
+        params.fov,
+        params.samplesPerPixel,
+        params.cameraPositionX,
+        params.cameraPositionY,
+        params.cameraPositionZ])
+    );
+  };
+
   gui.add(params, 'textureWidth')
   gui.add(params, 'textureHeight')
+  gui.add(params, 'fov', 20, 140).step(1).onChange(updateParams);
+  gui.add(params, 'samplesPerPixel', 1, 200).step(1).onChange(updateParams);
 
+
+  const keys = new Set();
+
+  document.addEventListener('keydown', (evt) => keys.add(evt.key));
+  document.addEventListener('keyup', (evt) => keys.delete(evt.key));
+  
   let computePassDurationSum = 0;
   let renderPassDurationSum = 0;
   let timerSamples = 0;
   function frame() {
+
+    const movement_rate = 0.1;
+    if (keys.has('a')) {
+      params.cameraPositionX -= movement_rate;
+    }
+    if (keys.has('d')) {
+      params.cameraPositionX += movement_rate;
+    }
+    if (keys.has('w')) {
+      params.cameraPositionZ -= movement_rate;
+    }
+    if (keys.has('s')) {
+      params.cameraPositionZ += movement_rate;
+    }
+    if (keys.has('q')) {
+      params.cameraPositionY -= movement_rate;
+    }
+    if (keys.has('e')) {
+      params.cameraPositionY += movement_rate;
+    }
+    updateParams();
+
+
     // Sample is no longer the active page.
     if (!pageState.active) return;
 
     renderPassDescriptor.colorAttachments[0].view = context
-    .getCurrentTexture()
-    .createView();
+      .getCurrentTexture()
+      .createView();
 
     const commandEncoder = device.createCommandEncoder();
 
     const computePass = commandEncoder.beginComputePass(computePassDescriptor);
     computePass.setPipeline(raytracePipeline);
-    computePass.setBindGroup(0, computeConstants);
+    computePass.setBindGroup(0, computeBindGroup);
 
-    computePass.setBindGroup(1, computeBindGroup0);
     computePass.dispatchWorkgroups(
       Math.ceil(srcWidth / 16),
       Math.ceil(srcHeight / 16)

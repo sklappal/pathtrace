@@ -19,8 +19,9 @@ const spheres = array<Sphere, sphere_count>(
 );
 
 
-@group(0) @binding(1) var<uniform> params : Params;
-@group(1) @binding(3) var outputTex : texture_storage_2d<rgba8unorm, write>;
+@group(0) @binding(0) var<uniform> params : Params;
+@group(0) @binding(1) var<uniform> viewMatrix : mat4x4f;
+@group(0) @binding(2) var outputTex : texture_storage_2d<rgba8unorm, write>;
 
 
 fn scatter(ray : Ray, intersection : Intersection) -> Scatter
@@ -121,43 +122,54 @@ fn main(
     uv = (vec2f(global_invocation_id.xy) + vec2f(0.5, 0.5)) * pixelSize;
     let aspectRatio = params.textureSize.x/params.textureSize.y;
 
+
+    let lookfrom = vec3f(params.cameraPosition.x, params.cameraPosition.y, params.cameraPosition.z);
+    let lookat = vec3f(params.cameraPosition.x, params.cameraPosition.y, params.cameraPosition.z - 1);
+    let vup = vec3f(0.0, 1.0, 0.0);
+    
+    let w = normalize(lookfrom - lookat);    
+    let u = normalize(cross(vup, w));
+    let v = cross(w, u);
+
+    let center = lookfrom;
+
     let focal_length = 1.0;
-    let theta = radians(70.0);
+    let theta = radians(params.fov);
     let h = tan(theta/2);
     let viewport_height = 2 * h * focal_length;
     let viewport_width = viewport_height * aspectRatio;
-    let viewport_u = vec3f(viewport_width, 0, 0);
-    let viewport_v = vec3f(0, -viewport_height, 0);
+    let viewport_u = viewport_width * u;
+    let viewport_v = -viewport_height * v;
 
     // Calculate the horizontal and vertical delta vectors from pixel to pixel.
     let pixel_delta_u = viewport_u / params.textureSize.x;
     let pixel_delta_v = viewport_v / params.textureSize.y;
 
-    let viewport_upper_left = vec3f(0.0) - vec3(0, 0, focal_length) - viewport_u/2 - viewport_v/2;
+    let viewport_upper_left = center - (focal_length * w) - viewport_u/2 - viewport_v/2;
     let pixel00_loc = viewport_upper_left + 0.5 * (pixel_delta_u + pixel_delta_v);
 
-    let samplesPerPixel = 100;
     var color = vec3f(0.0);
-    for (var i = 0; i < samplesPerPixel; i++)
+
+    let f = viewMatrix[0][0];
+    for (var i = 0; i < i32(params.samplesPerPixel); i++)
     {
-      var noise = (2*rand_2() - vec2f(1.0)) * pixelSize;
-      if (samplesPerPixel == 1)
+      var noise = 2*rand_2() - vec2f(1.0);
+      if (i32(params.samplesPerPixel) == 1)
       {
         noise = vec2f(0.0, 0.0);
       }
 
-      let offset = vec3f(vec2f(global_invocation_id.xy) * vec2f(pixel_delta_u.x, pixel_delta_v.y) + noise, 0.0);
+      let offset = f32(global_invocation_id.x) * pixel_delta_u + f32(global_invocation_id.y) * pixel_delta_v;
 
-      let pixel_center = pixel00_loc + offset;
-      let ray_direction = normalize(pixel_center - vec3f(0.0));
+      let pixel_center = pixel00_loc + offset + noise.x * pixel_delta_u + noise.y * pixel_delta_v;
+      let ray_direction = normalize(pixel_center - center);
 
-
-      color += ray_color(Ray(vec3f(0.0), ray_direction));
+      color += ray_color(Ray(center, ray_direction));
     }
     
 
     let writeIndex = vec2<i32>(global_invocation_id.xy);
 
-    textureStore(outputTex, writeIndex, vec4(color/f32(samplesPerPixel), 1.0));
+    textureStore(outputTex, writeIndex, vec4(color/params.samplesPerPixel, 1.0));
 }
 
