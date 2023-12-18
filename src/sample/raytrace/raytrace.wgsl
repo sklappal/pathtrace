@@ -1,15 +1,74 @@
-const sphere_count = 4;
+const material_count = 5;
+const materials = array<Material, material_count>(
+  Material(vec3f(0.8, 0.8, 0.0), LAMBERTIAN, 0.0, 0.0),
+  Material(vec3f(0.7, 0.3, 0.3), LAMBERTIAN, 0.0, 0.0),
+  Material(vec3f(0.8, 0.8, 0.8), METAL, 0.3, 0.0),
+  Material(vec3f(0.8, 0.6, 0.2), METAL, 1.0, 0.0),
+  Material(vec3f(0.0, 0.0, 0.0), DIELECTRIC, 1.0, 1.5),
+
+);
+
+
+const sphere_count = 5;
 const spheres = array<Sphere, sphere_count>(
-  Sphere(vec3f(0.0, 0.0, -5.0), 1.0, Material(vec3f(1.0, 1.0, 0.0))),
-  Sphere(vec3f(-2.0, 0.0, -5.0), 1.0, Material(vec3f(1.0, 1.0, 0.0))),
-  Sphere(vec3f(2.0, 0.0, -5.0), 1.0, Material(vec3f(1.0, 1.0, 0.0))),
-  Sphere(vec3f(0.0, -40.0, -5.0), 39.0, Material(vec3f(1.0, 1.0, 0.0)))
+  Sphere(vec3f(0.0, -40.0, -5.0), 39.0, 0),
+  Sphere(vec3f(0.0, 0.0, -5.0), 1.0, 1),
+  Sphere(vec3f(-2.0, 0.0, -5.0), 1.0, 2),
+  Sphere(vec3f(2.0, 0.0, -5.0), 1.0, 4),
+  Sphere(vec3f(2.0, 0.0, -5.0), -0.9, 4),
 );
 
 
 @group(0) @binding(1) var<uniform> params : Params;
 @group(1) @binding(3) var outputTex : texture_storage_2d<rgba8unorm, write>;
 
+
+fn scatter(ray : Ray, intersection : Intersection) -> Scatter
+{
+    let material = materials[intersection.material_index];
+    var new_direction: vec3f;
+    var attenuation: vec3f;
+    if (material.material_type == METAL)
+    {
+        new_direction = reflect(ray.direction, intersection.normal) + material.fuzz_factor * random_unit_vector();
+        attenuation = material.color;
+    }
+    else if (material.material_type == DIELECTRIC)
+    {
+        attenuation = vec3f(1.0, 1.0, 1.0);
+        let refraction_ratio = select(material.index_of_refraction, 1.0/material.index_of_refraction, intersection.front_face);
+
+        let cos_theta = min(dot(-ray.direction, intersection.normal), 1.0);
+        let sin_theta = sqrt(1.0 - cos_theta*cos_theta);
+
+        let cannot_refract :bool = refraction_ratio * sin_theta > 1.0;
+        new_direction = select(
+          refract(ray.direction, intersection.normal, refraction_ratio),
+          reflect(ray.direction, intersection.normal),
+          cannot_refract || reflectance(cos_theta, refraction_ratio) > rand_1()
+        );
+
+       
+
+    }
+    else
+    {
+        new_direction = intersection.normal + random_unit_vector();
+        
+        // catch degenerate case
+        if (dot(new_direction, new_direction) < 1e-6)
+        {
+             new_direction = intersection.normal;
+        }
+        attenuation = material.color;
+    }
+    
+    return Scatter(
+        Ray(intersection.position, normalize(new_direction)),
+        attenuation
+    );
+
+}
 
 fn ray_hits_spheres(ray: Ray) -> Intersection
 {
@@ -34,18 +93,21 @@ fn ray_color(ray: Ray) -> vec3f
     
     var counter = 0;
     var multiplier = 1.0;
+    var cur_ray = ray;
+    var color = vec3f(1.0);
     while (intersection.hit && counter < 5)
     {
         counter += 1;
-        multiplier *= 0.5;
-        let new_direction = random_on_hemisphere(intersection.normal);
-        intersection = ray_hits_spheres(Ray(intersection.position, new_direction));
+        let scatter = scatter(cur_ray, intersection);
+        color *= scatter.attenuation;
+        cur_ray = scatter.scattered;
+        intersection = ray_hits_spheres(cur_ray);
     }
     
     let a = 0.5*(ray.direction.y + 1.0);
-    let color = (1.0-a)*vec3f(1.0, 1.0, 1.0) + a*vec3f(0.5, 0.7, 1.0);
+    color *= (1.0-a)*vec3f(1.0, 1.0, 1.0) + a*vec3f(0.5, 0.7, 1.0);
     
-    return multiplier * color;
+    return color;
 }
 
 @compute @workgroup_size(16, 16, 1)
@@ -55,24 +117,24 @@ fn main(
 ) {
 
     let pixelSize = 1.0/(params.textureSize.xy);
+    // This is to initialize the random generator state
     uv = (vec2f(global_invocation_id.xy) + vec2f(0.5, 0.5)) * pixelSize;
     let aspectRatio = params.textureSize.x/params.textureSize.y;
 
-    let coords = uv*2.0 - 1.0;
-    // FOV = 2 arctan (w/2f)
-    // w/2f = tan(fov/2)
-    // 1/f = 2*tan(fov/2)/w
-    // f = w/2*tan(fov/2)
+    let focal_length = 1.0;
+    let theta = radians(70.0);
+    let h = tan(theta/2);
+    let viewport_height = 2 * h * focal_length;
+    let viewport_width = viewport_height * aspectRatio;
+    let viewport_u = vec3f(viewport_width, 0, 0);
+    let viewport_v = vec3f(0, -viewport_height, 0);
 
-    // let fov = radians(80.0);
-    // let f = params.textureSize.x / 2.0*tan(fov/2.0);
+    // Calculate the horizontal and vertical delta vectors from pixel to pixel.
+    let pixel_delta_u = viewport_u / params.textureSize.x;
+    let pixel_delta_v = viewport_v / params.textureSize.y;
 
-    // let projectionMatrix = matrix4x4(
-    //   f / params.textureSize.x, 0.0, 0.5
-    //   0.0, f / params.textureSize.y, 0.0, 0.5,
-    //   0.0, 0.0, 1.0);
-
-    
+    let viewport_upper_left = vec3f(0.0) - vec3(0, 0, focal_length) - viewport_u/2 - viewport_v/2;
+    let pixel00_loc = viewport_upper_left + 0.5 * (pixel_delta_u + pixel_delta_v);
 
     let samplesPerPixel = 100;
     var color = vec3f(0.0);
@@ -83,8 +145,14 @@ fn main(
       {
         noise = vec2f(0.0, 0.0);
       }
-      let direction = -1*normalize(vec3f(vec2f(coords.x, coords.y/aspectRatio) + noise, 1));
-      color += ray_color(Ray(vec3f(0.0), direction));
+
+      let offset = vec3f(vec2f(global_invocation_id.xy) * vec2f(pixel_delta_u.x, pixel_delta_v.y) + noise, 0.0);
+
+      let pixel_center = pixel00_loc + offset;
+      let ray_direction = normalize(pixel_center - vec3f(0.0));
+
+
+      color += ray_color(Ray(vec3f(0.0), ray_direction));
     }
     
 

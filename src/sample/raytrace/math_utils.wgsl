@@ -2,6 +2,10 @@
 var<private> state: i32 = 0;
 var<private> uv: vec2f = vec2f(0.0);
 
+fn rand_1() -> f32 {
+    return rand_2().x;
+}
+
 fn rand_2() -> vec2f
 {
     state +=1;
@@ -49,7 +53,7 @@ fn random_on_hemisphere(normal: vec3f) -> vec3f {
 }
 
 fn no_hit() -> Intersection {
-  return Intersection(false, vec3f(0.0), vec3f(0.0), 0.0);
+  return Intersection(false, vec3f(0.0), vec3f(0.0), 0.0, -1, false);
 }
 
 fn ray_sphere_intersection(ray: Ray, sphere: Sphere) -> Intersection
@@ -92,21 +96,36 @@ fn ray_sphere_intersection(ray: Ray, sphere: Sphere) -> Intersection
       t = select(second, first, first < second);
     }
     let intersectionPos = ray.origin + ray.direction * t;
-    let normal =  normalize(intersectionPos - sphere.position);
+    let normal =  (intersectionPos - sphere.position) / sphere.radius;
 
-    // var reflection = GetReflection(ray.direction, normal);
+    let front_face = dot(ray.direction, normal) < 0;
 
-    return Intersection(true, intersectionPos, normal, t);
-    
-/*
-    function GetReflection(incidentRay, planeNormal)
-    {
-      var dot = -vec3.dot(incidentRay, planeNormal);
-      var ret = vec3.create();
-      vec3.scale(ret, planeNormal, dot * 2);
-      vec3.add(ret, ret, incidentRay);
-      return ret;
-    }
-*/
-
+    return Intersection(
+        true, 
+        intersectionPos, 
+        select(-normal, normal, front_face), 
+        t, 
+        sphere.material_index, 
+        front_face);
 }
+
+fn reflect(v : vec3f, n : vec3f) -> vec3f {
+    return v - 2*dot(v,n)*n;
+}
+
+fn refract(uv : vec3f, n : vec3f, etai_over_etat : f32) -> vec3f {
+    let cos_theta = min(dot(-uv, n), 1.0);
+    let r_out_perp =  etai_over_etat * (uv + cos_theta*n);
+    let r_out_parallel = -sqrt(abs(1.0 - dot(r_out_perp, r_out_perp))) * n;
+    return r_out_perp + r_out_parallel;
+}
+
+
+fn reflectance(cosine: f32, ref_idx: f32) -> f32 {
+    // Use Schlick's approximation for reflectance.
+    var r0 = (1-ref_idx) / (1+ref_idx);
+    r0 = r0*r0;
+    return r0 + (1-r0)*pow((1 - cosine),5);
+}
+
+
