@@ -5,10 +5,6 @@ const Document: React.FunctionComponent = () => {
     <Html>
       <Head>
         <link
-          href="https://fonts.googleapis.com/css?family=Inconsolata&display=swap"
-          rel="stylesheet"
-        />
-        <link
           href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.48.4/codemirror.min.css"
           rel="stylesheet"
         />
