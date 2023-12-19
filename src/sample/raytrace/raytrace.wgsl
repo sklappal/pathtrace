@@ -28,7 +28,7 @@ const background_color = vec3f(0.0);
 
 
 @group(0) @binding(0) var<uniform> params : Params;
-@group(0) @binding(2) var outputTex : texture_storage_2d<rgba8unorm, write>;
+@group(0) @binding(2) var outputTex : texture_storage_2d<rgba16float, write>;
 
 
 fn scatter(ray : Ray, intersection : Intersection) -> Scatter
