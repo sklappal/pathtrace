@@ -124,11 +124,14 @@ fn main(
 
 
     let lookfrom = vec3f(params.cameraPosition.x, params.cameraPosition.y, params.cameraPosition.z);
-    let lookat = vec3f(params.cameraPosition.x, params.cameraPosition.y, params.cameraPosition.z - 1);
+    
+    
+    
+    let lookat = vec3f(sin(params.yaw)*sin(params.pitch), cos(params.pitch), cos(params.yaw)*sin(params.pitch));
     let vup = vec3f(0.0, 1.0, 0.0);
     
-    let w = normalize(lookfrom - lookat);    
-    let u = normalize(cross(vup, w));
+    let w = lookat;
+    let u = cross(vup, w);
     let v = cross(w, u);
 
     let center = lookfrom;

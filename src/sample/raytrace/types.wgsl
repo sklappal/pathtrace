@@ -2,7 +2,9 @@ struct Params {
   textureSize : vec2<f32>,
   fov : f32,
   samplesPerPixel: f32,
-  cameraPosition: vec3<f32>
+  cameraPosition: vec3<f32>,
+  pitch: f32,
+  yaw: f32
 }
 
 struct Ray {

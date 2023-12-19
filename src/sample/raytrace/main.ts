@@ -14,7 +14,7 @@ const init: SampleInit = async ({ canvas, pageState, gui }) => {
   const hasTimestampQuery = adapter.features.has('timestamp-query');
   console.log("hasTimestampQuery:", hasTimestampQuery);
   const device = await adapter.requestDevice({
-    requiredFeatures: ['timestamp-query']
+    requiredFeatures: hasTimestampQuery ? ['timestamp-query'] : []
   });
 
 
@@ -83,24 +83,27 @@ const init: SampleInit = async ({ canvas, pageState, gui }) => {
 
   const spareResultBuffers = [];
 
-  let querySet = device.createQuerySet({
-    type: 'timestamp',
-    count: 4,
-  });
-  let resolveBuffer = device.createBuffer({
-    size: 4 * BigInt64Array.BYTES_PER_ELEMENT,
-    usage: GPUBufferUsage.QUERY_RESOLVE | GPUBufferUsage.COPY_SRC,
-  });
-  computePassDescriptor.timestampWrites = {
-    querySet,
-    beginningOfPassWriteIndex: 0,
-    endOfPassWriteIndex: 1,
-  };
-  renderPassDescriptor.timestampWrites = {
-    querySet,
-    beginningOfPassWriteIndex: 2,
-    endOfPassWriteIndex: 3,
-  };
+  var querySet, resolveBuffer;
+  if (hasTimestampQuery) {
+    querySet = device.createQuerySet({
+      type: 'timestamp',
+      count: 4,
+    });
+    resolveBuffer = device.createBuffer({
+      size: 4 * BigInt64Array.BYTES_PER_ELEMENT,
+      usage: GPUBufferUsage.QUERY_RESOLVE | GPUBufferUsage.COPY_SRC,
+    });
+    computePassDescriptor.timestampWrites = {
+      querySet,
+      beginningOfPassWriteIndex: 0,
+      endOfPassWriteIndex: 1,
+    };
+    renderPassDescriptor.timestampWrites = {
+      querySet,
+      beginningOfPassWriteIndex: 2,
+      endOfPassWriteIndex: 3,
+    };
+  }
 
 
 
@@ -110,7 +113,7 @@ const init: SampleInit = async ({ canvas, pageState, gui }) => {
   });
 
   const paramsBuffer = device.createBuffer({
-    size: 32,
+    size: 64,
     usage: GPUBufferUsage.COPY_DST | GPUBufferUsage.UNIFORM,
   });
 
@@ -173,23 +176,11 @@ const init: SampleInit = async ({ canvas, pageState, gui }) => {
     textureHeight: srcHeight,
     fov: 80.0,
     samplesPerPixel: 100,
-    cameraPositionX: 0.0,
-    cameraPositionY: 0.0,
-    cameraPositionZ: 0.0
+    cameraPosition: [0.0, 0.0, 0.0],
+    pitch: Math.PI/2.0,
+    yaw: 0.0
   };
 
-
-  const viewMatrix =
-    [1.0, 0.0, 0.0, 0.0,
-      0.0, 1.0, 0.0, 0.0,
-      0.0, 0.0, -1.0, 0.0,
-      0.0, 0.0, 0.0, 0.0];
-
-  device.queue.writeBuffer(
-    viewMatrixBuffer,
-    0,
-    new Float32Array(viewMatrix)
-  );
 
   const updateParams = () => {
     device.queue.writeBuffer(
@@ -200,9 +191,11 @@ const init: SampleInit = async ({ canvas, pageState, gui }) => {
         params.textureHeight, 
         params.fov,
         params.samplesPerPixel,
-        params.cameraPositionX,
-        params.cameraPositionY,
-        params.cameraPositionZ])
+        params.cameraPosition[0],
+        params.cameraPosition[1],
+        params.cameraPosition[2],
+        params.pitch,
+        params.yaw])
     );
   };
 
@@ -211,36 +204,78 @@ const init: SampleInit = async ({ canvas, pageState, gui }) => {
   gui.add(params, 'fov', 20, 140).step(1).onChange(updateParams);
   gui.add(params, 'samplesPerPixel', 1, 200).step(1).onChange(updateParams);
 
-
   const keys = new Set();
 
   document.addEventListener('keydown', (evt) => keys.add(evt.key));
   document.addEventListener('keyup', (evt) => keys.delete(evt.key));
-  
+  canvas.addEventListener("mousedown", async () => {
+    await canvas.requestPointerLock();
+  });
+
+
+  const updatePosition = (e) => {
+    let dx = (5 * (e.movementX)) / innerWidth;
+    let dy = (5 * (e.movementY)) / innerHeight;
+    params.pitch -= dy;
+    params.pitch = Math.min(Math.PI-1e-6, Math.max(params.pitch, 1e-6))
+    params.yaw -= dx;
+  }
+
+  const lockChangeAlert = () => {
+    if (document.pointerLockElement === canvas) {
+        document.addEventListener("mousemove", updatePosition, false);
+    } else {
+        document.removeEventListener("mousemove", updatePosition, false);
+    }
+  }
+
+  document.addEventListener("pointerlockchange", lockChangeAlert, false);
+
+  canvas.addEventListener("contextmenu", (e) => {
+      e.preventDefault();
+  });
+
+  canvas.addEventListener("mouseup", (e) => {
+      e.preventDefault();
+      document.exitPointerLock()
+  });
+
+
   let computePassDurationSum = 0;
   let renderPassDurationSum = 0;
   let timerSamples = 0;
+
+  const cross = (a, b) => [ a[1] * b[2] - a[2] * b[1], a[2] * b[0] - a[0] * b[2], a[0] * b[1] - a[1] * b[0] ]
+  const sum = (a, b) => [a[0] + b[0], a[1] + b[1], a[2] + b[2]]
+  const mul = (a, s) => [a[0] * s, a[1] * s, a[2] * s]
   function frame() {
 
+    let lookat = [Math.sin(params.yaw)*Math.sin(params.pitch), Math.cos(params.pitch), Math.cos(params.yaw)*Math.sin(params.pitch)]
+    let vup = [0.0, 1.0, 0.0];
+    
+    let w = lookat;
+    let u = cross(vup, w);
+    let v = cross(w, u);
     const movement_rate = 0.1;
     if (keys.has('a')) {
-      params.cameraPositionX -= movement_rate;
+      params.cameraPosition = sum(params.cameraPosition, mul(u, -movement_rate))
     }
     if (keys.has('d')) {
-      params.cameraPositionX += movement_rate;
-    }
-    if (keys.has('w')) {
-      params.cameraPositionZ -= movement_rate;
-    }
-    if (keys.has('s')) {
-      params.cameraPositionZ += movement_rate;
+      params.cameraPosition = sum(params.cameraPosition, mul(u, +movement_rate))
     }
     if (keys.has('q')) {
-      params.cameraPositionY -= movement_rate;
+      params.cameraPosition = sum(params.cameraPosition, mul(v, -movement_rate))
     }
     if (keys.has('e')) {
-      params.cameraPositionY += movement_rate;
+      params.cameraPosition = sum(params.cameraPosition, mul(v, +movement_rate))
     }
+    if (keys.has('w')) {
+      params.cameraPosition = sum(params.cameraPosition, mul(w, -movement_rate))
+    }
+    if (keys.has('s')) {
+      params.cameraPosition = sum(params.cameraPosition, mul(w, +movement_rate))
+    }
+
     updateParams();
 
 
@@ -271,59 +306,63 @@ const init: SampleInit = async ({ canvas, pageState, gui }) => {
     passEncoder.draw(6);
     passEncoder.end();
 
-    let resultBuffer =
-      spareResultBuffers.pop() ||
-      device.createBuffer({
-        size: 4 * BigInt64Array.BYTES_PER_ELEMENT,
-        usage: GPUBufferUsage.COPY_DST | GPUBufferUsage.MAP_READ,
+
+    if (hasTimestampQuery)
+    {
+      let resultBuffer =
+        spareResultBuffers.pop() ||
+        device.createBuffer({
+          size: 4 * BigInt64Array.BYTES_PER_ELEMENT,
+          usage: GPUBufferUsage.COPY_DST | GPUBufferUsage.MAP_READ,
+        });
+      commandEncoder.resolveQuerySet(querySet, 0, 4, resolveBuffer, 0);
+      commandEncoder.copyBufferToBuffer(
+        resolveBuffer,
+        0,
+        resultBuffer,
+        0,
+        resultBuffer.size
+      );
+
+
+      device.queue.submit([commandEncoder.finish()]);
+
+
+      resultBuffer.mapAsync(GPUMapMode.READ).then(() => {
+        const times = new BigInt64Array(resultBuffer.getMappedRange());
+        const computePassDuration = Number(times[1] - times[0]);
+        const renderPassDuration = Number(times[3] - times[2]);
+
+        // In some cases the timestamps may wrap around and produce a negative
+        // number as the GPU resets it's timings. These can safely be ignored.
+        if (computePassDuration > 0 && renderPassDuration > 0) {
+          // console.log(computePassDuration, renderPassDuration);
+          computePassDurationSum += computePassDuration;
+          renderPassDurationSum += renderPassDuration;
+          timerSamples++;
+        }
+        resultBuffer.unmap();
+
+        // Periodically update the text for the timer stats
+        const kNumTimerSamplesPerUpdate = 30;
+        if (timerSamples >= kNumTimerSamplesPerUpdate) {
+          const avgComputeMicroseconds = Math.round(
+            computePassDurationSum / timerSamples / (1000.0*1000)
+          );
+          const avgRenderMicroseconds = Math.round(
+            renderPassDurationSum / timerSamples / (1000.0*1000)
+          );
+          console.log( `\
+    avg compute: ${avgComputeMicroseconds}ms
+    avg render:  ${avgRenderMicroseconds}ms
+    spare readback buffers:    ${spareResultBuffers.length}`);
+          computePassDurationSum = 0;
+          renderPassDurationSum = 0;
+          timerSamples = 0;
+        }
+        spareResultBuffers.push(resultBuffer);
       });
-    commandEncoder.resolveQuerySet(querySet, 0, 4, resolveBuffer, 0);
-    commandEncoder.copyBufferToBuffer(
-      resolveBuffer,
-      0,
-      resultBuffer,
-      0,
-      resultBuffer.size
-    );
-
-
-    device.queue.submit([commandEncoder.finish()]);
-
-
-    resultBuffer.mapAsync(GPUMapMode.READ).then(() => {
-      const times = new BigInt64Array(resultBuffer.getMappedRange());
-      const computePassDuration = Number(times[1] - times[0]);
-      const renderPassDuration = Number(times[3] - times[2]);
-
-      // In some cases the timestamps may wrap around and produce a negative
-      // number as the GPU resets it's timings. These can safely be ignored.
-      if (computePassDuration > 0 && renderPassDuration > 0) {
-        // console.log(computePassDuration, renderPassDuration);
-        computePassDurationSum += computePassDuration;
-        renderPassDurationSum += renderPassDuration;
-        timerSamples++;
-      }
-      resultBuffer.unmap();
-
-      // Periodically update the text for the timer stats
-      const kNumTimerSamplesPerUpdate = 30;
-      if (timerSamples >= kNumTimerSamplesPerUpdate) {
-        const avgComputeMicroseconds = Math.round(
-          computePassDurationSum / timerSamples / (1000.0*1000)
-        );
-        const avgRenderMicroseconds = Math.round(
-          renderPassDurationSum / timerSamples / (1000.0*1000)
-        );
-        console.log( `\
-  avg compute: ${avgComputeMicroseconds}ms
-  avg render:  ${avgRenderMicroseconds}ms
-  spare readback buffers:    ${spareResultBuffers.length}`);
-        computePassDurationSum = 0;
-        renderPassDurationSum = 0;
-        timerSamples = 0;
-      }
-      spareResultBuffers.push(resultBuffer);
-    });
+    }
 
     requestAnimationFrame(frame);
   }
