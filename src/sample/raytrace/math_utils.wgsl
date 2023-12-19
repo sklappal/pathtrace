@@ -2,8 +2,11 @@
 var<private> state: i32 = 0;
 var<private> uv: vec2f = vec2f(0.0);
 
+
+
+
 fn rand_1() -> f32 {
-    return rand_2().x;
+    return rand_3().x;
 }
 
 fn rand_2() -> vec2f
@@ -27,7 +30,7 @@ fn rand_3() -> vec3f
 
 fn random_in_unit_sphere() -> vec3f {
     while (true) {
-        let p = rand_3();
+        let p = rand_3()*2 - vec3f(1.0);
         if (dot(p, p) < 1)
         {
             return p;
@@ -106,6 +109,60 @@ fn ray_sphere_intersection(ray: Ray, sphere: Sphere) -> Intersection
         select(-normal, normal, front_face), 
         t, 
         sphere.material_index, 
+        front_face);
+}
+
+fn ray_quad_intersection(ray: Ray, quad: Quad) -> Intersection
+{
+    let side1 = quad.corner2 - quad.corner1;
+    let side2 = quad.corner3 - quad.corner1;
+    let normal = normalize(cross(side1, side2));
+
+    let dott = dot(normal, ray.direction);
+    if (abs(dott) < 1e-4)
+    {
+        // ray lies in the quad plane, treat as no-intersection
+        return no_hit();
+    }
+
+    let v = quad.corner1 - ray.origin;
+    // dot(n, x0-r0) / dot(n0, d)
+    let t = dot(v, normal) / dott;
+
+    // intersection behind us
+    if (t < 1e-3)
+    {
+        return no_hit();
+    }
+
+    let intersection_point = ray.origin + t*ray.direction;
+
+    let testpoint = intersection_point - quad.corner1;
+
+    let proj1 = dot(side1, testpoint);
+
+    // Intersection does not land into quad on side1
+    if (proj1 < 0 || proj1 > dot(side1,side1))
+    {
+        return no_hit();
+    }
+
+    let proj2 = dot(side2, testpoint);
+
+    // Intersection does not land into quad on side2
+    if (proj2 < 0 || proj2 > dot(side2,side2))
+    {
+        return no_hit();
+    }
+
+    let front_face = dot(ray.direction, normal) < 0;
+
+    return Intersection(
+        true, 
+        intersection_point, 
+        select(-normal, normal, front_face), 
+        t, 
+        quad.material_index, 
         front_face);
 }
 

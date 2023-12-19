@@ -1,11 +1,11 @@
-const material_count = 5;
+const material_count = 6;
 const materials = array<Material, material_count>(
   Material(vec3f(0.8, 0.8, 0.0), LAMBERTIAN, 0.0, 0.0),
   Material(vec3f(0.7, 0.3, 0.3), LAMBERTIAN, 0.0, 0.0),
   Material(vec3f(0.8, 0.8, 0.8), METAL, 0.3, 0.0),
   Material(vec3f(0.8, 0.6, 0.2), METAL, 1.0, 0.0),
   Material(vec3f(0.0, 0.0, 0.0), DIELECTRIC, 1.0, 1.5),
-
+  Material(vec3f(2.0, 4.0, 4.0), DIFFUSELIGHT, 0.0, 0.0)
 );
 
 
@@ -18,9 +18,16 @@ const spheres = array<Sphere, sphere_count>(
   Sphere(vec3f(2.0, 0.0, -5.0), -0.9, 4),
 );
 
+const quad_count = 1;
+const quads = array<Quad, quad_count>(
+  Quad(vec3f(-1.0, 3.0, -6.0), vec3f(1.0, 3.0, -6.0), vec3f(-1.0, 3.0, -4.0), 5),
+);
+
+//const background_color = vec3f(0.70, 0.80, 1.00);
+const background_color = vec3f(0.0);
+
 
 @group(0) @binding(0) var<uniform> params : Params;
-@group(0) @binding(1) var<uniform> viewMatrix : mat4x4f;
 @group(0) @binding(2) var outputTex : texture_storage_2d<rgba8unorm, write>;
 
 
@@ -29,6 +36,19 @@ fn scatter(ray : Ray, intersection : Intersection) -> Scatter
     let material = materials[intersection.material_index];
     var new_direction: vec3f;
     var attenuation: vec3f;
+
+    if (material.material_type == DIFFUSELIGHT)
+    {
+        if (intersection.front_face)
+        {
+            return Scatter(false, Ray(vec3f(0.0), vec3f(0.0)), material.color);
+        }
+        else 
+        {
+            return Scatter(false, Ray(vec3f(0.0), vec3f(0.0)), background_color);
+        }
+    }
+
     if (material.material_type == METAL)
     {
         new_direction = reflect(ray.direction, intersection.normal) + material.fuzz_factor * random_unit_vector();
@@ -48,9 +68,6 @@ fn scatter(ray : Ray, intersection : Intersection) -> Scatter
           reflect(ray.direction, intersection.normal),
           cannot_refract || reflectance(cos_theta, refraction_ratio) > rand_1()
         );
-
-       
-
     }
     else
     {
@@ -65,13 +82,14 @@ fn scatter(ray : Ray, intersection : Intersection) -> Scatter
     }
     
     return Scatter(
+        true,
         Ray(intersection.position, normalize(new_direction)),
         attenuation
     );
 
 }
 
-fn ray_hits_spheres(ray: Ray) -> Intersection
+fn ray_hits_objects(ray: Ray) -> Intersection
 {
     var min_dist = 1e6;
     var min_intersection: Intersection;
@@ -84,29 +102,70 @@ fn ray_hits_spheres(ray: Ray) -> Intersection
           min_intersection = intersection;
       }
     }
+
+    for (var i = 0; i < quad_count; i++)
+    {
+      let intersection = ray_quad_intersection(ray, quads[i]);
+      if (intersection.hit && (intersection.t < min_dist))
+      {
+          min_dist = intersection.t;
+          min_intersection = intersection;
+      }
+    }
     return min_intersection;
 }
 
 
 fn ray_color(ray: Ray) -> vec3f
 {
-    var intersection = ray_hits_spheres(ray);
-    
-    var counter = 0;
-    var multiplier = 1.0;
-    var cur_ray = ray;
-    var color = vec3f(1.0);
-    while (intersection.hit && counter < 5)
+    var intersection = ray_hits_objects(ray);
+
+    if (!intersection.hit)
     {
-        counter += 1;
-        let scatter = scatter(cur_ray, intersection);
-        color *= scatter.attenuation;
-        cur_ray = scatter.scattered;
-        intersection = ray_hits_spheres(cur_ray);
+        return background_color;
     }
+
+    var depth = 0;
+    var cur_ray = ray;
+
+    const max_depth = 5;
+    var intersections = array<Intersection, max_depth>();
+    var scatters = array<Scatter, max_depth>();
     
-    let a = 0.5*(ray.direction.y + 1.0);
-    color *= (1.0-a)*vec3f(1.0, 1.0, 1.0) + a*vec3f(0.5, 0.7, 1.0);
+    while (intersection.hit && depth < max_depth)
+    {
+        intersections[depth] = intersection;
+        let scatter = scatter(cur_ray, intersection);
+        scatters[depth] = scatter;
+
+        if (!scatter.did_scatter)
+        {
+          break;
+        }
+
+        depth += 1;
+        cur_ray = scatter.scattered;
+        intersection = ray_hits_objects(cur_ray);
+    }
+
+    // Assume the ray went into the background
+    var color = background_color;
+    
+    // If the last ray hit something ..
+    if (intersection.hit)
+    {
+      // .. and the something was an emitter, use that as basis
+      if (!scatters[depth].did_scatter)
+      {
+        color = scatters[depth].attenuation;
+      }
+    }
+
+    // Loop back to origin and accumulate color
+    for (var i = depth-1; depth > 0; depth--)
+    {
+      color *= scatters[i].attenuation;
+    }
     
     return color;
 }
@@ -122,17 +181,14 @@ fn main(
     uv = (vec2f(global_invocation_id.xy) + vec2f(0.5, 0.5)) * pixelSize;
     let aspectRatio = params.textureSize.x/params.textureSize.y;
 
-
     let lookfrom = vec3f(params.cameraPosition.x, params.cameraPosition.y, params.cameraPosition.z);
-    
-    
-    
-    let lookat = vec3f(sin(params.yaw)*sin(params.pitch), cos(params.pitch), cos(params.yaw)*sin(params.pitch));
+
+    let lookat = normalize(vec3f(sin(params.yaw)*sin(params.pitch), cos(params.pitch), cos(params.yaw)*sin(params.pitch)));
     let vup = vec3f(0.0, 1.0, 0.0);
     
     let w = lookat;
-    let u = cross(vup, w);
-    let v = cross(w, u);
+    let u = normalize(cross(vup, w));
+    let v = normalize(cross(w, u));
 
     let center = lookfrom;
 
@@ -153,7 +209,6 @@ fn main(
 
     var color = vec3f(0.0);
 
-    let f = viewMatrix[0][0];
     for (var i = 0; i < i32(params.samplesPerPixel); i++)
     {
       var noise = 2*rand_2() - vec2f(1.0);

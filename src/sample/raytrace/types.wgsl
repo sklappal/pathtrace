@@ -18,9 +18,17 @@ struct Sphere {
   material_index: i32
 }
 
+struct Quad {
+    corner1: vec3f,
+    corner2: vec3f,
+    corner3: vec3f,
+    material_index: i32
+}
+
 const METAL: i32 = 0;
 const LAMBERTIAN: i32 = 1;
 const DIELECTRIC: i32 = 2;
+const DIFFUSELIGHT: i32 = 3;
 
 struct Material {
   color: vec3f,
@@ -40,6 +48,7 @@ struct Intersection {
 }
 
 struct Scatter {
+    did_scatter: bool,
     scattered: Ray,
     attenuation: vec3f
 }

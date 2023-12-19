@@ -144,12 +144,6 @@ const init: SampleInit = async ({ canvas, pageState, gui }) => {
         }
       },
       {
-        binding: 1,
-        resource: {
-          buffer: viewMatrixBuffer,
-        }
-      },
-      {
         binding: 2,
         resource: texture.createView(),
       }
@@ -202,7 +196,7 @@ const init: SampleInit = async ({ canvas, pageState, gui }) => {
   gui.add(params, 'textureWidth')
   gui.add(params, 'textureHeight')
   gui.add(params, 'fov', 20, 140).step(1).onChange(updateParams);
-  gui.add(params, 'samplesPerPixel', 1, 200).step(1).onChange(updateParams);
+  gui.add(params, 'samplesPerPixel', 1, 1000).step(1).onChange(updateParams);
 
   const keys = new Set();
 
