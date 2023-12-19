@@ -1,9 +1,5 @@
 
-var<private> state: i32 = 0;
 var<private> uv: vec2f = vec2f(0.0);
-
-
-
 
 fn rand_1() -> f32 {
     return rand_3().x;
@@ -11,20 +7,19 @@ fn rand_1() -> f32 {
 
 fn rand_2() -> vec2f
 {
-    state +=1;
-    var p3 = vec3f(uv, f32(state));
-    p3 = fract(p3 * vec3f(.1031, .1030, .0973));
-    p3 += dot(p3, p3.yzx+33.33);
-    return fract((p3.xx+p3.yz)*p3.zy);
+    return rand_3().xy;
 }
 
 fn rand_3() -> vec3f
 {
-    state +=1;
-    var p3 = vec3f(uv, f32(state));
-    p3 = fract(p3 * vec3(.1001, .1030, .0973));
-    p3 += dot(p3, p3.yxz+33.33);
-    return fract((p3.xxy + p3.yxx)*p3.zyx);
+    let c = textureSampleLevel(
+        randomTex,
+        samp,
+        uv,
+        0.0
+      ).rgb;
+    uv = c.rg;
+    return c;
 }
 
 

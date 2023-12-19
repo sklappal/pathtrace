@@ -9,6 +9,7 @@ const initInteraction = (canvas, gui, params, updateParams) => {
     gui.add(params, 'textureHeight')
     gui.add(params, 'fov', 20, 140).step(1).onChange(updateParams);
     gui.add(params, 'samplesPerPixel', 1, 1000).step(1).onChange(updateParams);
+    gui.add(params, 'lightIntensity', 1, 100).step(1).onChange(updateParams);
 
     const keys = new Set();
 

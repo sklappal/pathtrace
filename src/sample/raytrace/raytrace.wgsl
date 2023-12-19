@@ -5,7 +5,7 @@ const materials = array<Material, material_count>(
   Material(vec3f(0.8, 0.8, 0.8), METAL, 0.3, 0.0),
   Material(vec3f(0.8, 0.6, 0.2), METAL, 1.0, 0.0),
   Material(vec3f(0.0, 0.0, 0.0), DIELECTRIC, 1.0, 1.5),
-  Material(vec3f(2.0, 4.0, 4.0), DIFFUSELIGHT, 0.0, 0.0)
+  Material(vec3f(0.5, 0.5, 0.0), DIFFUSELIGHT, 0.0, 0.0)
 );
 
 
@@ -20,7 +20,7 @@ const spheres = array<Sphere, sphere_count>(
 
 const quad_count = 1;
 const quads = array<Quad, quad_count>(
-  Quad(vec3f(-1.0, 3.0, -6.0), vec3f(1.0, 3.0, -6.0), vec3f(-1.0, 3.0, -4.0), 5),
+  Quad(vec3f(-3.0, 3.0, -8.0), vec3f(3.0, 3.0, -8.0), vec3f(-1.0, 3.0, -2.0), 5),
 );
 
 //const background_color = vec3f(0.70, 0.80, 1.00);
@@ -28,7 +28,9 @@ const background_color = vec3f(0.0);
 
 
 @group(0) @binding(0) var<uniform> params : Params;
-@group(0) @binding(2) var outputTex : texture_storage_2d<rgba16float, write>;
+@group(0) @binding(1) var randomTex : texture_2d<f32>;
+@group(0) @binding(2) var samp : sampler;
+@group(0) @binding(3) var outputTex : texture_storage_2d<rgba16float, write>;
 
 
 fn scatter(ray : Ray, intersection : Intersection) -> Scatter
@@ -41,7 +43,7 @@ fn scatter(ray : Ray, intersection : Intersection) -> Scatter
     {
         if (intersection.front_face)
         {
-            return Scatter(false, Ray(vec3f(0.0), vec3f(0.0)), material.color);
+            return Scatter(false, Ray(vec3f(0.0), vec3f(0.0)), material.color*params.lightIntensity);
         }
         else 
         {
@@ -228,6 +230,8 @@ fn main(
 
     let writeIndex = vec2<i32>(global_invocation_id.xy);
 
-    textureStore(outputTex, writeIndex, vec4(color/params.samplesPerPixel, 1.0));
+    color /= params.samplesPerPixel;
+
+    textureStore(outputTex, writeIndex, vec4(color, 1.0));
 }
 

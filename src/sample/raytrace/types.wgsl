@@ -4,7 +4,8 @@ struct Params {
   samplesPerPixel: f32,
   cameraPosition: vec3<f32>,
   pitch: f32,
-  yaw: f32
+  yaw: f32,
+  lightIntensity: f32,
 }
 
 struct Ray {

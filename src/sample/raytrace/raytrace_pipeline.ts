@@ -3,7 +3,26 @@ import math_utils from './math_utils.wgsl';
 import types from './types.wgsl';
 
 
-const initRaytrace = (device, hasTimestampQuery, params) => {
+const initRaytrace = async (device, hasTimestampQuery, params) => {
+
+
+    const response = await fetch('../assets/img/7R4wB.png');
+    const imageBitmap = await createImageBitmap(await response.blob());
+  
+    const [srcWidth, srcHeight] = [imageBitmap.width, imageBitmap.height];
+    const randomTexture = device.createTexture({
+      size: [srcWidth, srcHeight, 1],
+      format: 'rgba8unorm',
+      usage:
+        GPUTextureUsage.TEXTURE_BINDING |
+        GPUTextureUsage.COPY_DST |
+        GPUTextureUsage.RENDER_ATTACHMENT,
+    });
+    device.queue.copyExternalImageToTexture(
+      { source: imageBitmap },
+      { texture: randomTexture },
+      [imageBitmap.width, imageBitmap.height]
+    );
 
     const raytracePipeline = device.createComputePipeline({
         layout: 'auto',
@@ -39,7 +58,7 @@ const initRaytrace = (device, hasTimestampQuery, params) => {
 
 
     const paramsBuffer = device.createBuffer({
-        size: 64,
+        size: 128,
         usage: GPUBufferUsage.COPY_DST | GPUBufferUsage.UNIFORM,
     });
 
@@ -54,6 +73,13 @@ const initRaytrace = (device, hasTimestampQuery, params) => {
           GPUTextureUsage.STORAGE_BINDING |
           GPUTextureUsage.TEXTURE_BINDING,
       })
+      
+    const sampler = device.createSampler({
+        addressModeU: 'repeat',
+        addressModeV: 'repeat',
+        magFilter: 'linear',
+        minFilter: 'linear',
+    });
 
     const computeBindGroup = device.createBindGroup({
         layout: raytracePipeline.getBindGroupLayout(0),
@@ -65,7 +91,15 @@ const initRaytrace = (device, hasTimestampQuery, params) => {
                 }
             },
             {
+                binding: 1,
+                resource: randomTexture.createView(),
+            },
+            {
                 binding: 2,
+                resource: sampler,
+            },
+            {
+                binding: 3,
                 resource: frameBuffer.createView(),
             }
         ],
@@ -85,7 +119,8 @@ const initRaytrace = (device, hasTimestampQuery, params) => {
                 params.cameraPosition[1],
                 params.cameraPosition[2],
                 params.pitch,
-                params.yaw])
+                params.yaw,
+                params.lightIntensity,])
         );
     };
 
@@ -143,8 +178,8 @@ const initRaytrace = (device, hasTimestampQuery, params) => {
                     );
 
                     console.log(`\
-        avg compute: ${avgComputeMicroseconds}ms
-        spare readback buffers:    ${spareResultBuffers.length}`);
+                        avg compute: ${avgComputeMicroseconds}ms
+                        spare readback buffers:    ${spareResultBuffers.length}`);
                     computePassDurationSum = 0;
                     timerSamples = 0;
                 }
