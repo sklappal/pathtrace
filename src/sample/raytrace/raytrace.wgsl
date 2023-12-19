@@ -5,7 +5,7 @@ const materials = array<Material, material_count>(
   Material(vec3f(0.8, 0.8, 0.8), METAL, 0.3, 0.0),
   Material(vec3f(0.8, 0.6, 0.2), METAL, 1.0, 0.0),
   Material(vec3f(0.0, 0.0, 0.0), DIELECTRIC, 1.0, 1.5),
-  Material(vec3f(0.5, 0.5, 0.0), DIFFUSELIGHT, 0.0, 0.0)
+  Material(vec3f(0.5, 0.1, 0.5), DIFFUSELIGHT, 0.0, 0.0)
 );
 
 
@@ -130,7 +130,7 @@ fn ray_color(ray: Ray) -> vec3f
     var depth = 0;
     var cur_ray = ray;
 
-    const max_depth = 5;
+    const max_depth = 10;
     var intersections = array<Intersection, max_depth>();
     var scatters = array<Scatter, max_depth>();
     
