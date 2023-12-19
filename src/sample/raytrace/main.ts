@@ -206,8 +206,8 @@ const init: SampleInit = async ({ canvas, pageState, gui }) => {
 
   const keys = new Set();
 
-  document.addEventListener('keydown', (evt) => keys.add(evt.key));
-  document.addEventListener('keyup', (evt) => keys.delete(evt.key));
+  document.addEventListener('keydown', (evt) => keys.add(evt.code));
+  document.addEventListener('keyup', (evt) => keys.delete(evt.code));
   canvas.addEventListener("mousedown", async () => {
     await canvas.requestPointerLock();
   });
@@ -256,23 +256,23 @@ const init: SampleInit = async ({ canvas, pageState, gui }) => {
     let w = lookat;
     let u = cross(vup, w);
     let v = cross(w, u);
-    const movement_rate = 0.1;
-    if (keys.has('a')) {
+    const movement_rate = keys.has('ShiftLeft') ? 0.25 : 0.05;
+    if (keys.has('KeyA')) {
       params.cameraPosition = sum(params.cameraPosition, mul(u, -movement_rate))
     }
-    if (keys.has('d')) {
+    if (keys.has('KeyD')) {
       params.cameraPosition = sum(params.cameraPosition, mul(u, +movement_rate))
     }
-    if (keys.has('q')) {
+    if (keys.has('KeyQ')) {
       params.cameraPosition = sum(params.cameraPosition, mul(v, -movement_rate))
     }
-    if (keys.has('e')) {
+    if (keys.has('KeyE')) {
       params.cameraPosition = sum(params.cameraPosition, mul(v, +movement_rate))
     }
-    if (keys.has('w')) {
+    if (keys.has('KeyW')) {
       params.cameraPosition = sum(params.cameraPosition, mul(w, -movement_rate))
     }
-    if (keys.has('s')) {
+    if (keys.has('KeyS')) {
       params.cameraPosition = sum(params.cameraPosition, mul(w, +movement_rate))
     }
 
