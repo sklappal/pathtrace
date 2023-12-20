@@ -6,6 +6,7 @@ struct Params {
   pitch: f32,
   yaw: f32,
   lightIntensity: f32,
+  time: f32
 }
 
 struct Ray {

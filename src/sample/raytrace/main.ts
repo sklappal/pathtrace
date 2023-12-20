@@ -4,6 +4,7 @@ import initRaytrace from './raytrace_pipeline';
 import initTonemap from './tonemap_pipeline';
 import initDisplayResults from './display_results_pipeline';
 import initInteraction from './interaction_handler';
+import initAccumulate from './accumulate_pipeline';
 
 const init: SampleInit = async ({ canvas, pageState, gui }) => {
 
@@ -21,29 +22,34 @@ const init: SampleInit = async ({ canvas, pageState, gui }) => {
     textureWidth: 1920,
     textureHeight: 1080,
     fov: 80.0,
-    samplesPerPixel: 100,
+    samplesPerPixel: 20,
     cameraPosition: [0.0, 0.0, 0.0],
     pitch: Math.PI / 2.0,
     yaw: 0.0,
-    lightIntensity: 30.0
+    lightIntensity: 30.0,
+    time: 0.0
   };
 
   let raytrace_pipeline = await initRaytrace(device, hasTimestampQuery, params);
 
-  let tonemap_pipeline = initTonemap(device, params, raytrace_pipeline.frameBuffer);
+  let accumulate_pipeline = initAccumulate(device, params, raytrace_pipeline.frameBuffer);
+
+  let tonemap_pipeline = initTonemap(device, params, accumulate_pipeline.frameBuffer);
 
   let display_results_pipeline = initDisplayResults(navigator, device, context, tonemap_pipeline.frameBuffer);
 
-  let interaction_handler = initInteraction(canvas, gui, params, raytrace_pipeline.updateParams);
-
+  let interaction_handler = initInteraction(canvas, gui, params);
 
   function frame() {
+    params.time += 1.0;
 
-    interaction_handler.updateInteraction();
+    const changed = interaction_handler.updateInteraction();
 
     const commandEncoder = device.createCommandEncoder();
 
     raytrace_pipeline.raytrace(commandEncoder);
+
+    accumulate_pipeline.accumulate(commandEncoder, changed);
 
     tonemap_pipeline.tonemap(commandEncoder);
 

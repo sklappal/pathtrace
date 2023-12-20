@@ -6,7 +6,7 @@ import types from './types.wgsl';
 const initRaytrace = async (device, hasTimestampQuery, params) => {
 
 
-    const response = await fetch('../assets/img/7R4wB.png');
+    const response = await fetch('../assets/img/random.png');
     const imageBitmap = await createImageBitmap(await response.blob());
   
     const [srcWidth, srcHeight] = [imageBitmap.width, imageBitmap.height];
@@ -106,6 +106,7 @@ const initRaytrace = async (device, hasTimestampQuery, params) => {
     });
 
 
+
     const updateParams = () => {
         device.queue.writeBuffer(
             paramsBuffer,
@@ -120,11 +121,14 @@ const initRaytrace = async (device, hasTimestampQuery, params) => {
                 params.cameraPosition[2],
                 params.pitch,
                 params.yaw,
-                params.lightIntensity,])
+                params.lightIntensity,
+                params.time])
         );
     };
 
     const raytrace = commandEncoder => {
+        updateParams();
+
         const computePass = commandEncoder.beginComputePass(computePassDescriptor);
         computePass.setPipeline(raytracePipeline);
         computePass.setBindGroup(0, computeBindGroup);

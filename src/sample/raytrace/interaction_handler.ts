@@ -1,15 +1,14 @@
 
-const initInteraction = (canvas, gui, params, updateParams) => {
+const initInteraction = (canvas, gui, params) => {
 
     const devicePixelRatio = window.devicePixelRatio;
     canvas.width = params.textureWidth * devicePixelRatio
     canvas.height = params.textureHeight * devicePixelRatio
 
-    gui.add(params, 'textureWidth')
-    gui.add(params, 'textureHeight')
-    gui.add(params, 'fov', 20, 140).step(1).onChange(updateParams);
-    gui.add(params, 'samplesPerPixel', 1, 1000).step(1).onChange(updateParams);
-    gui.add(params, 'lightIntensity', 1, 100).step(1).onChange(updateParams);
+    let changed = false;
+
+    gui.add(params, 'fov', 20, 140).step(1).onChange(() => changed = true);
+    gui.add(params, 'lightIntensity', 1, 500).step(1).onChange(() => changed = true);
 
     const keys = new Set();
 
@@ -26,6 +25,7 @@ const initInteraction = (canvas, gui, params, updateParams) => {
         params.pitch -= dy;
         params.pitch = Math.min(Math.PI - 1e-6, Math.max(params.pitch, 1e-6))
         params.yaw -= dx;
+        changed = true;
     }
 
     const lockChangeAlert = () => {
@@ -51,6 +51,7 @@ const initInteraction = (canvas, gui, params, updateParams) => {
     const sum = (a, b) => [a[0] + b[0], a[1] + b[1], a[2] + b[2]]
     const mul = (a, s) => [a[0] * s, a[1] * s, a[2] * s]
 
+
     const updateInteraction = () => {
         let lookat = [Math.sin(params.yaw) * Math.sin(params.pitch), Math.cos(params.pitch), Math.cos(params.yaw) * Math.sin(params.pitch)]
         let vup = [0.0, 1.0, 0.0];
@@ -59,26 +60,34 @@ const initInteraction = (canvas, gui, params, updateParams) => {
         let u = cross(vup, w);
         let v = cross(w, u);
         const movement_rate = keys.has('ShiftLeft') ? 0.25 : 0.05;
+
         if (keys.has('KeyA')) {
             params.cameraPosition = sum(params.cameraPosition, mul(u, -movement_rate))
+            changed = true;
         }
         if (keys.has('KeyD')) {
             params.cameraPosition = sum(params.cameraPosition, mul(u, +movement_rate))
+            changed = true;
         }
         if (keys.has('KeyQ')) {
             params.cameraPosition = sum(params.cameraPosition, mul(v, -movement_rate))
+            changed = true;
         }
         if (keys.has('KeyE')) {
             params.cameraPosition = sum(params.cameraPosition, mul(v, +movement_rate))
+            changed = true;
         }
         if (keys.has('KeyW')) {
             params.cameraPosition = sum(params.cameraPosition, mul(w, -movement_rate))
+            changed = true;
         }
         if (keys.has('KeyS')) {
             params.cameraPosition = sum(params.cameraPosition, mul(w, +movement_rate))
+            changed = true;
         }
-
-        updateParams();
+        let ret = changed;
+        changed = false;
+        return ret;
     }
 
     return {updateInteraction};

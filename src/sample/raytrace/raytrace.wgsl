@@ -130,7 +130,7 @@ fn ray_color(ray: Ray) -> vec3f
     var depth = 0;
     var cur_ray = ray;
 
-    const max_depth = 10;
+    const max_depth = 15;
     var intersections = array<Intersection, max_depth>();
     var scatters = array<Scatter, max_depth>();
     
@@ -140,6 +140,7 @@ fn ray_color(ray: Ray) -> vec3f
         let scatter = scatter(cur_ray, intersection);
         scatters[depth] = scatter;
 
+        // Hit emitter
         if (!scatter.did_scatter)
         {
           break;
@@ -156,11 +157,7 @@ fn ray_color(ray: Ray) -> vec3f
     // If the last ray hit something ..
     if (intersection.hit)
     {
-      // .. and the something was an emitter, use that as basis
-      if (!scatters[depth].did_scatter)
-      {
         color = scatters[depth].attenuation;
-      }
     }
 
     // Loop back to origin and accumulate color
@@ -172,6 +169,10 @@ fn ray_color(ray: Ray) -> vec3f
     return color;
 }
 
+fn rand(time:f32) -> vec2f {
+    return fract(sin(vec2f(time * 12.9898, time*78.233)) * 43758.5453);
+}
+
 @compute @workgroup_size(16, 16, 1)
 fn main(
   @builtin(global_invocation_id) global_invocation_id : vec3u,
@@ -180,7 +181,7 @@ fn main(
 
     let pixelSize = 1.0/(params.textureSize.xy);
     // This is to initialize the random generator state
-    uv = (vec2f(global_invocation_id.xy) + vec2f(0.5, 0.5)) * pixelSize;
+    uv = (vec2f(global_invocation_id.xy) + vec2f(0.5, 0.5) + rand(params.time)) * pixelSize;
     let aspectRatio = params.textureSize.x/params.textureSize.y;
 
     let lookfrom = vec3f(params.cameraPosition.x, params.cameraPosition.y, params.cameraPosition.z);
