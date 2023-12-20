@@ -4,14 +4,14 @@
 // The tonemapped, gamma-corrected output framebuffer
 @group(0) @binding(1) var output : texture_storage_2d<rgba8unorm, write>;
 
-const TonemapExposure = 0.5;
+const TonemapExposure = 1.0;
 
 const Gamma = 2.2;
 
 @compute @workgroup_size(16, 16, 1)
 fn main(@builtin(global_invocation_id) invocation_id : vec3u) {
   let color = textureLoad(input, invocation_id.xy, 0).rgb;
-  let tonemapped = tonemap(color);
+  let tonemapped = reinhard_tonemap(color);
   let gammed = gamma(tonemapped);
   textureStore(output, invocation_id.xy, vec4f(gammed, 1));
 }

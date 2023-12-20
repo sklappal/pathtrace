@@ -114,8 +114,9 @@ fn ray_quad_intersection(ray: Ray, quad: Quad) -> Intersection
     let normal = normalize(cross(side1, side2));
 
     let dott = dot(normal, ray.direction);
-    if (abs(dott) < 1e-4)
+    if (dott > 1e-4)
     {
+        // Ray hits the plane from behind, treat as no-go
         // ray lies in the quad plane, treat as no-intersection
         return no_hit();
     }
@@ -150,15 +151,13 @@ fn ray_quad_intersection(ray: Ray, quad: Quad) -> Intersection
         return no_hit();
     }
 
-    let front_face = dot(ray.direction, normal) < 0;
-
     return Intersection(
         true, 
         intersection_point, 
-        select(-normal, normal, front_face), 
+        normal, 
         t, 
         quad.material_index, 
-        front_face);
+        true);
 }
 
 fn reflect(v : vec3f, n : vec3f) -> vec3f {
