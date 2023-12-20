@@ -1,31 +1,3 @@
-const material_count = 6;
-const materials = array<Material, material_count>(
-  Material(vec3f(0.8, 0.8, 0.0), LAMBERTIAN, 0.0, 0.0),
-  Material(vec3f(0.7, 0.3, 0.3), LAMBERTIAN, 0.0, 0.0),
-  Material(vec3f(0.8, 0.8, 0.8), METAL, 0.3, 0.0),
-  Material(vec3f(0.8, 0.6, 0.2), METAL, 1.0, 0.0),
-  Material(vec3f(0.0, 0.0, 0.0), DIELECTRIC, 1.0, 1.5),
-  Material(vec3f(0.5, 0.1, 0.5), DIFFUSELIGHT, 0.0, 0.0)
-);
-
-
-const sphere_count = 5;
-const spheres = array<Sphere, sphere_count>(
-  Sphere(vec3f(0.0, -40.0, -5.0), 39.0, 0),
-  Sphere(vec3f(0.0, 0.0, -5.0), 1.0, 1),
-  Sphere(vec3f(-2.0, 0.0, -5.0), 1.0, 2),
-  Sphere(vec3f(2.0, 0.0, -5.0), 1.0, 4),
-  Sphere(vec3f(2.0, 0.0, -5.0), -0.9, 4),
-);
-
-const quad_count = 1;
-const quads = array<Quad, quad_count>(
-  Quad(vec3f(-3.0, 3.0, -8.0), vec3f(3.0, 3.0, -8.0), vec3f(-1.0, 3.0, -2.0), 5),
-);
-
-//const background_color = vec3f(0.70, 0.80, 1.00);
-const background_color = vec3f(0.0);
-
 
 @group(0) @binding(0) var<uniform> params : Params;
 @group(0) @binding(1) var randomTex : texture_2d<f32>;

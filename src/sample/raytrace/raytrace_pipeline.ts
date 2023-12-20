@@ -1,6 +1,8 @@
 import raytraceWGSL from './raytrace.wgsl';
 import math_utils from './math_utils.wgsl';
 import types from './types.wgsl';
+// import scene from './scene.wgsl'
+import sceneGenerator from './scene_generator';
 
 
 const initRaytrace = async (device, hasTimestampQuery, params) => {
@@ -24,16 +26,18 @@ const initRaytrace = async (device, hasTimestampQuery, params) => {
       [imageBitmap.width, imageBitmap.height]
     );
 
+    const scene = sceneGenerator().generateScene()
+
+
     const raytracePipeline = device.createComputePipeline({
         layout: 'auto',
         compute: {
             module: device.createShaderModule({
-                code: math_utils + types + raytraceWGSL,
+                code: math_utils + types + scene + raytraceWGSL,
             }),
             entryPoint: 'main',
         },
     });
-
 
     const computePassDescriptor: GPUComputePassDescriptor = {};
 

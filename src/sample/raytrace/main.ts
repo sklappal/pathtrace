@@ -23,8 +23,8 @@ const init: SampleInit = async ({ canvas, pageState, gui }) => {
     textureHeight: 1080,
     fov: 80.0,
     samplesPerPixel: 20,
-    cameraPosition: [0.0, 0.0, 0.0],
-    pitch: Math.PI / 2.0,
+    cameraPosition: [0.0, 2.0, 5.0],
+    pitch: Math.PI / 2.0 - Math.PI / 8.0,
     yaw: 0.0,
     lightIntensity: 30.0,
     time: 0.0
