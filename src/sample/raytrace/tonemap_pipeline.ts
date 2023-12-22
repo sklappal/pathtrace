@@ -28,6 +28,11 @@ const initTonemap = (device, params, inputTexture) => {
           GPUTextureUsage.TEXTURE_BINDING,
       })
 
+    const paramsBuffer = device.createBuffer({
+        size: 16,
+        usage: GPUBufferUsage.COPY_DST | GPUBufferUsage.UNIFORM,
+    });
+
     const computeBindGroup = device.createBindGroup({
         layout: tonemapPipeline.getBindGroupLayout(0),
         entries: [
@@ -38,12 +43,33 @@ const initTonemap = (device, params, inputTexture) => {
             {
                 binding: 1,
                 resource: frameBuffer.createView(),
+            },
+            {
+                binding: 2,
+                resource: {
+                    buffer: paramsBuffer
+                }
             }
         ],
     });
 
 
+    const updateParams = () => {
+        device.queue.writeBuffer(
+            paramsBuffer,
+            0,
+            new Float32Array([
+                params.exposure,
+                params.gamma,
+                params.tonemap_selection])
+        );
+    };
+
+
     const tonemap = commandEncoder => {
+
+        updateParams();
+
         const computePass = commandEncoder.beginComputePass(computePassDescriptor);
         computePass.setPipeline(tonemapPipeline);
         computePass.setBindGroup(0, computeBindGroup);

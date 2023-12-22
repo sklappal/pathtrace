@@ -7,9 +7,12 @@ const initInteraction = (canvas, gui, params) => {
 
     let changed = false;
 
-    gui.add(params, 'fov', 20, 140).step(1).onChange(() => changed = true);
-    gui.add(params, 'lightIntensity', 1, 500).step(1).onChange(() => changed = true);
+    gui.add(params, 'fov', 1, 140).step(1).onChange(() => changed = true);
+    gui.add(params, 'lightIntensity', 1, 20).step(1).onChange(() => changed = true);
     gui.add(params, 'samplesPerPixel', 1, 20).step(1).onChange(() => changed = true);
+    gui.add(params, 'exposure', 0, 7).step(0.1);
+    gui.add(params, 'gamma', 0, 7).step(0.1);
+    gui.add(params, 'tonemap_selection', 0.0, 3.0).step(1.0);
 
     const keys = new Set();
 

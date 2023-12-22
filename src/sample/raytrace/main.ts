@@ -27,7 +27,10 @@ const init: SampleInit = async ({ canvas, pageState, gui }) => {
     pitch: Math.PI / 2.0 - Math.PI / 8.0,
     yaw: 0.0,
     lightIntensity: 30.0,
-    time: 0.0
+    time: 0.0,
+    exposure: 4.0,
+    gamma: 2.2,
+    tonemap_selection: 3.0
   };
 
   let raytrace_pipeline = await initRaytrace(device, hasTimestampQuery, params);

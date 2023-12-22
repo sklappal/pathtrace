@@ -108,12 +108,14 @@ const toVec = v => `vec3f(${v[0]}, ${v[1]}, ${v[2]})`
 
 const defaultScene = () => {
     const materials = [
-        createLambertian([0.8, 0.8, 0.0]),
-        createLambertian([0.8, 0.8, 0.0]),
+        createLambertian([0.0, 0.1, 0.9]),
+        createLambertian([0.0, 0.8, 0.8]),
         createMetal([0.8, 0.8, 0.8], 0.3),
         createMetal([0.8, 0.6, 0.2], 1.0),
         createDielectric(1.5),
-        createLight([0.5, 0.1, 0.5])
+        createLight([1.0, 1.0, 0.1]),
+        createLight([1.0, 0.0, 0.1]),
+        createLight([0.1, 0.1, 0.8]),
     ];
 
     const spheres = [
@@ -125,7 +127,9 @@ const defaultScene = () => {
     ]
 
     const quads = [
-        createQuad([-3.0, 3.0, -3.0], [3.0, 3.0, -3.0], [-1.0, 3.0, 3.0], 5)
+        createQuad([-1.0, 3.0, -1.0], [1.0, 3.0, -1.0], [-1.0, 3.0, 1.0], 5),
+        createQuad([-4.0, 3.0, -1.0], [-2.0, 3.0, -1.0], [-4.0, 3.0, 1.0], 6),
+        createQuad([2.0, 3.0, -1.0], [4.0, 3.0, -1.0], [2.0, 3.0, 1.0], 7),
     ]
 
     const bg_color = [0.0, 0.0, 0.0];
@@ -319,7 +323,8 @@ const bookscene = () =>
     materials.push(createMetal([0.7, 0.6, 0.5], 0.0));
     spheres.push(createSphere([4, 1, 0], 1.0, materials.length-1))
     const quads = []
-    const bg_color = [0.5, 0.7, 1.0];
+    // const bg_color = [0.5, 0.7, 1.0];
+    const bg_color = [0.1, 0.1, 0.1];
     return {
         materials, spheres, quads, bg_color
     }
@@ -327,9 +332,9 @@ const bookscene = () =>
 
 const sceneGenerator = () => {
 
-    // const { materials, spheres, quads, bg_color } = defaultScene();
+    const { materials, spheres, quads, bg_color } = defaultScene();
     //const { materials, spheres, quads, bg_color } = ballsScene2();
-    const { materials, spheres, quads, bg_color } = bookscene();
+    // const { materials, spheres, quads, bg_color } = bookscene();
 
     const generateScene = () => {
 

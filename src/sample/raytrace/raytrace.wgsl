@@ -5,6 +5,28 @@
 @group(0) @binding(3) var outputTex : texture_storage_2d<rgba16float, write>;
 
 
+fn sphere_pdf_gen() -> vec3f
+{
+    return random_unit_vector();
+}
+
+fn sphere_pdf_val() -> f32
+{
+    return 1.0 / (4.0 * radians(180));
+}
+
+fn cosine_pdf_gen(uvw : UVW) -> vec3f
+{
+    return uvw_local(uvw, random_cosine_direction());
+}
+
+fn cosine_pdf_val(direction : vec3f, uvw : UVW) -> f32
+{
+    let cos_theta = dot(direction, uvw.w);
+    return max(0.0, cos_theta / radians(180.0));
+}
+
+
 fn scatter(ray : Ray, intersection : Intersection) -> Scatter
 {
     let material = materials[intersection.material_index];
@@ -40,13 +62,14 @@ fn scatter(ray : Ray, intersection : Intersection) -> Scatter
         new_direction = select(
           refract(ray.direction, intersection.normal, refraction_ratio),
           reflect(ray.direction, intersection.normal),
-          cannot_refract || reflectance(cos_theta, refraction_ratio) > rand_1()
+          cannot_refract
         );
     }
     else
     {
-        new_direction = intersection.normal + random_unit_vector();
-        
+        let uvw = uvw_build_from(intersection.normal);
+        new_direction = uvw_local(uvw, random_cosine_direction());
+
         // catch degenerate case
         if (dot(new_direction, new_direction) < 1e-6)
         {
@@ -90,6 +113,41 @@ fn ray_hits_objects(ray: Ray) -> Intersection
 }
 
 
+fn random_towards_quad(origin: vec3f) -> vec3f
+{
+    let quad = quads[0];
+
+    let side1 = quad.corner2 - quad.corner1;
+    let side2 = quad.corner3 - quad.corner1;
+
+    let point = quad.corner1 +  rand_1()*side1  + rand_1()*side2;
+    return normalize(point - origin);
+}
+
+fn pdf_value(origin: vec3f, v: vec3f) -> f32 {
+    let quad = quads[0];
+    let intersection = ray_quad_intersection(Ray(origin, v), quad);
+
+    let side1 = quad.corner2 - quad.corner1;
+    let side2 = quad.corner3 - quad.corner1;
+    let area = length(side1) * length(side2);
+
+    let distance_squared = intersection.t * intersection.t;
+    let cosine = abs(dot(v, intersection.normal));
+
+    return distance_squared / (cosine * area);
+}
+
+fn scattering_pdf(ray_in: Ray, intersection: Intersection, scattered: Ray) -> f32 {
+  
+    if (materials[intersection.material_index].material_type == LAMBERTIAN)
+    {
+        return cosine_pdf(scattered.direction, intersection.normal);
+    }
+    
+    return 1.0;
+}
+
 fn ray_color(ray: Ray) -> vec3f
 {
     var intersection = ray_hits_objects(ray);
@@ -105,7 +163,9 @@ fn ray_color(ray: Ray) -> vec3f
     const max_depth = 15;
     var intersections = array<Intersection, max_depth>();
     var scatters = array<Scatter, max_depth>();
-    
+    var scatter_pdfs = array<vec2f, max_depth>();
+
+
     while (intersection.hit && depth < max_depth)
     {
         intersections[depth] = intersection;
@@ -117,6 +177,9 @@ fn ray_color(ray: Ray) -> vec3f
         {
           break;
         }
+
+        scatter_pdfs[depth] = vec2f(1.0, 1.0);
+
 
         depth += 1;
         cur_ray = scatter.scattered;
@@ -135,7 +198,7 @@ fn ray_color(ray: Ray) -> vec3f
     // Loop back to origin and accumulate color
     for (var i = depth-1; depth > 0; depth--)
     {
-      color *= scatters[i].attenuation;
+        color *= (scatter_pdfs[i].x * scatters[i].attenuation) / scatter_pdfs[i].y;
     }
     
     return color;

@@ -7,7 +7,6 @@ import sceneGenerator from './scene_generator';
 
 const initRaytrace = async (device, hasTimestampQuery, params) => {
 
-
     const response = await fetch('../assets/img/random.png');
     const imageBitmap = await createImageBitmap(await response.blob());
   

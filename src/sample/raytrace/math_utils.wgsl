@@ -179,4 +179,60 @@ fn reflectance(cosine: f32, ref_idx: f32) -> f32 {
     return r0 + (1-r0)*pow((1 - cosine),5);
 }
 
+fn random_cosine_direction() -> vec3f {
+    let r = rand_2();
 
+    let phi = 3.0*radians(180.0)*r.x; // 3 pi WTF??
+
+    let x = cos(phi)*sqrt(r.y);
+    let y = sin(phi)*sqrt(r.y);
+    let z = 1-r.y; 
+
+    return vec3f(x, y, z);
+}
+
+fn same_hemisphere(w: vec3f, wp: vec3f) -> bool {
+    return dot(w, wp) > 0.0;
+}
+
+fn cosine_pdf(direction: vec3f, normal: vec3f) -> f32
+{
+    if (same_hemisphere(direction, normal))
+    {
+        // cos theta / pi
+        return dot(direction, normal) / radians(180.0);
+    }
+    return 0.0;
+}
+
+
+struct UVW {
+    u : vec3f,
+    v : vec3f, 
+    w : vec3f
+}
+
+fn uvw_build_from(w: vec3f) -> UVW
+{
+    if (abs(w.x) > 0.9)
+    {
+        let a = vec3f(0.0, 1.0, 0.0);
+        let v = normalize(cross(w, a));
+        let u = cross(w, v);
+        return UVW(u, v, w);
+        
+    }
+    else 
+    {
+        let a = vec3f(1.0, 0.0, 0.0);
+        let v = normalize(cross(w, a));
+        let u = cross(w, v);
+        return UVW(u, v, w);
+    }
+    
+}
+
+fn uvw_local(uvw: UVW, direction: vec3f) -> vec3f
+{
+    return (direction.x * uvw.u) + (direction.y * uvw.v) + (direction.z * uvw.w);
+}
