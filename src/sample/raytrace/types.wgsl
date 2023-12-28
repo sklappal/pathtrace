@@ -52,5 +52,7 @@ struct Intersection {
 struct Scatter {
     did_scatter: bool,
     scattered: Ray,
-    attenuation: vec3f
+    attenuation: vec3f,
+    scattering_pdf: f32,
+    pdf: f32
 }

@@ -26,7 +26,7 @@ const init: SampleInit = async ({ canvas, pageState, gui }) => {
     cameraPosition: [0.0, 2.0, 5.0],
     pitch: Math.PI / 2.0 - Math.PI / 8.0,
     yaw: 0.0,
-    lightIntensity: 30.0,
+    lightIntensity: 20.0,
     time: 0.0,
     exposure: 4.0,
     gamma: 2.2,

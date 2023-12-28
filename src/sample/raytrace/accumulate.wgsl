@@ -22,4 +22,6 @@ fn main(@builtin(global_invocation_id) invocation_id : vec3u) {
     }
     textureStore(curAccum, invocation_id.xy, vec4f(sum, 1));
     textureStore(output, invocation_id.xy, vec4f(sum / f32(accumulationParams.numSamples), 1));
+
+    // textureStore(output, invocation_id.xy, vec4f(color, 1));
 }

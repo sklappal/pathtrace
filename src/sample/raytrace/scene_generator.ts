@@ -109,27 +109,25 @@ const toVec = v => `vec3f(${v[0]}, ${v[1]}, ${v[2]})`
 const defaultScene = () => {
     const materials = [
         createLambertian([0.0, 0.1, 0.9]),
-        createLambertian([0.0, 0.8, 0.8]),
-        createMetal([0.8, 0.8, 0.8], 0.3),
-        createMetal([0.8, 0.6, 0.2], 1.0),
+        createLambertian([0.6, 0.1, 0.9]),
+        createMetal([1,1,1], 0.22),
         createDielectric(1.5),
-        createLight([1.0, 1.0, 0.1]),
+        createLight([1.0,1.0,0.2]),
         createLight([1.0, 0.0, 0.1]),
         createLight([0.1, 0.1, 0.8]),
     ];
 
     const spheres = [
         createSphere([0.0, -40.0, 0.0], 39.0, 0),
-        createSphere([0.0, 0.0, 0.0], 1.0, 1),
-        createSphere([-2.0, 0.0, 0.0], 1.0, 2),
-        createSphere([2.0, 0.0, 0.0], 1.0, 4),
-        createSphere([2.0, 0.0, 0.0], -0.9, 4),
+        createSphere([0.0, 0.2, 0.0], 1.0, 1),
+        createSphere([-2.0, 0.2, 0.0], 1.0, 2),
+        createSphere([2.0, 0.2, 0.0], 1.0, 3)
     ]
 
     const quads = [
-        createQuad([-1.0, 3.0, -1.0], [1.0, 3.0, -1.0], [-1.0, 3.0, 1.0], 5),
-        createQuad([-4.0, 3.0, -1.0], [-2.0, 3.0, -1.0], [-4.0, 3.0, 1.0], 6),
-        createQuad([2.0, 3.0, -1.0], [4.0, 3.0, -1.0], [2.0, 3.0, 1.0], 7),
+        createQuad([-1.0, 3.0, -1.0], [1.0, 3.0, -1.0], [-1.0, 3.0, 1.0], 4),
+        createQuad([-4.0, 3.0, -1.0], [-2.0, 3.0, -1.0], [-4.0, 3.0, 1.0], 5),
+        createQuad([2.0, 3.0, -1.0], [4.0, 3.0, -1.0], [2.0, 3.0, 1.0], 6),
     ]
 
     const bg_color = [0.0, 0.0, 0.0];
@@ -370,7 +368,5 @@ const sceneGenerator = () => {
     return {generateScene};
 
 }
-
-
 
 export default sceneGenerator;

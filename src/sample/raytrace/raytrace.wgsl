@@ -32,16 +32,17 @@ fn scatter(ray : Ray, intersection : Intersection) -> Scatter
     let material = materials[intersection.material_index];
     var new_direction: vec3f;
     var attenuation: vec3f;
-
+    var pdf = 1.0f;
+    var scattering_pdf = 1.0f;
     if (material.material_type == DIFFUSELIGHT)
     {
         if (intersection.front_face)
         {
-            return Scatter(false, Ray(vec3f(0.0), vec3f(0.0)), material.color*params.lightIntensity);
+            return Scatter(false, Ray(vec3f(0.0), vec3f(0.0)), material.color*params.lightIntensity, scattering_pdf, pdf);
         }
         else 
         {
-            return Scatter(false, Ray(vec3f(0.0), vec3f(0.0)), background_color);
+            return Scatter(false, Ray(vec3f(0.0), vec3f(0.0)), background_color, scattering_pdf, pdf);
         }
     }
 
@@ -67,21 +68,38 @@ fn scatter(ray : Ray, intersection : Intersection) -> Scatter
     }
     else
     {
-        let uvw = uvw_build_from(intersection.normal);
-        new_direction = uvw_local(uvw, random_cosine_direction());
-
-        // catch degenerate case
-        if (dot(new_direction, new_direction) < 1e-6)
+        let light_amount = 0.5;
+        if (rand_1() > light_amount)
         {
-             new_direction = intersection.normal;
+            let uvw = uvw_build_from(intersection.normal);
+            new_direction = uvw_local(uvw, random_cosine_direction());
+
+            // catch degenerate case
+            if (dot(new_direction, new_direction) < 1e-6)
+            {
+                new_direction = intersection.normal;
+            }
+        }
+        else
+        {
+            new_direction = random_towards_quad(intersection.position);
         }
         attenuation = material.color;
+        let cos_theta = dot(new_direction, intersection.normal);
+        let cos_pdf = max(0.0, cos_theta/radians(180.0));
+        let light_pdf = light_pdf_value(intersection.position, new_direction);
+        pdf = light_amount*light_pdf + (1.0-light_amount)*cos_pdf*2.0;
+        
+        
+        scattering_pdf = cos_pdf;
     }
     
     return Scatter(
         true,
         Ray(intersection.position, normalize(new_direction)),
-        attenuation
+        attenuation,
+        scattering_pdf, 
+        pdf
     );
 
 }
@@ -124,16 +142,20 @@ fn random_towards_quad(origin: vec3f) -> vec3f
     return normalize(point - origin);
 }
 
-fn pdf_value(origin: vec3f, v: vec3f) -> f32 {
+fn light_pdf_value(origin: vec3f, dir: vec3f) -> f32 {
     let quad = quads[0];
-    let intersection = ray_quad_intersection(Ray(origin, v), quad);
+    let intersection = ray_quad_intersection(Ray(origin, dir), quad);
+    if (!intersection.hit)
+    {
+        return 0.0;
+    }
 
     let side1 = quad.corner2 - quad.corner1;
     let side2 = quad.corner3 - quad.corner1;
     let area = length(side1) * length(side2);
 
     let distance_squared = intersection.t * intersection.t;
-    let cosine = abs(dot(v, intersection.normal));
+    let cosine = abs(dot(dir, intersection.normal));
 
     return distance_squared / (cosine * area);
 }
@@ -165,6 +187,7 @@ fn ray_color(ray: Ray) -> vec3f
     var scatters = array<Scatter, max_depth>();
     var scatter_pdfs = array<vec2f, max_depth>();
 
+    
 
     while (intersection.hit && depth < max_depth)
     {
@@ -178,13 +201,13 @@ fn ray_color(ray: Ray) -> vec3f
           break;
         }
 
-        scatter_pdfs[depth] = vec2f(1.0, 1.0);
-
+        scatter_pdfs[depth] = vec2f(scatter.scattering_pdf, scatter.pdf);
 
         depth += 1;
         cur_ray = scatter.scattered;
         intersection = ray_hits_objects(cur_ray);
     }
+    let max_achieved_depth = depth;
 
     // Assume the ray went into the background
     var color = background_color;
@@ -192,15 +215,32 @@ fn ray_color(ray: Ray) -> vec3f
     // If the last ray hit something ..
     if (intersection.hit)
     {
+        // return vec3f(1.0, 0.0, 0.0);
         color = scatters[depth].attenuation;
     }
 
     // Loop back to origin and accumulate color
-    for (var i = depth-1; depth > 0; depth--)
+    for (var i = depth; i > 0; i--)
     {
-        color *= (scatter_pdfs[i].x * scatters[i].attenuation) / scatter_pdfs[i].y;
+        let color_contribution = (scatter_pdfs[i-1].x * scatters[i-1].attenuation) / scatter_pdfs[i-1].y;
+        color = color * color_contribution;
     }
-    
+
+
+    // if (max_achieved_depth == 0)
+    // {
+    //     return vec3f(0.0, 0.0, 0.0);
+    // } else if (max_achieved_depth == 1)
+    // {
+    //     return vec3f(1.0, 0.0, 0.0);
+    // } else if (max_achieved_depth == 2)
+    // {
+    //     return vec3f(0.0, 1.0, 0.0);
+    // }
+    // else {
+    //     return vec3f(0.0,0.0, 1.0);
+    // }
+
     return color;
 }
 
