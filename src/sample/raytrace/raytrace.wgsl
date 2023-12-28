@@ -68,8 +68,35 @@ fn scatter(ray : Ray, intersection : Intersection) -> Scatter
     }
     else
     {
-        let light_amount = 0.5;
-        if (rand_1() > light_amount)
+        const advanced_sampling = false;
+        if (advanced_sampling)
+        {
+            let light_amount = 0.5;
+            if (rand_1() > light_amount)
+            {
+                let uvw = uvw_build_from(intersection.normal);
+                new_direction = uvw_local(uvw, random_cosine_direction());
+
+                // catch degenerate case
+                if (dot(new_direction, new_direction) < 1e-6)
+                {
+                    new_direction = intersection.normal;
+                }
+            }
+            else
+            {
+                new_direction = random_towards_quad(intersection.position);
+            }
+            attenuation = material.color;
+            let cos_theta = dot(new_direction, intersection.normal);
+            let cos_pdf = max(0.0, cos_theta/radians(180.0));
+            let light_pdf = light_pdf_value(intersection.position, new_direction);
+            pdf = light_amount*light_pdf + (1.0-light_amount)*cos_pdf*2.0;
+            
+            
+            scattering_pdf = cos_pdf;
+        }
+        else 
         {
             let uvw = uvw_build_from(intersection.normal);
             new_direction = uvw_local(uvw, random_cosine_direction());
@@ -79,19 +106,8 @@ fn scatter(ray : Ray, intersection : Intersection) -> Scatter
             {
                 new_direction = intersection.normal;
             }
+            attenuation = material.color;
         }
-        else
-        {
-            new_direction = random_towards_quad(intersection.position);
-        }
-        attenuation = material.color;
-        let cos_theta = dot(new_direction, intersection.normal);
-        let cos_pdf = max(0.0, cos_theta/radians(180.0));
-        let light_pdf = light_pdf_value(intersection.position, new_direction);
-        pdf = light_amount*light_pdf + (1.0-light_amount)*cos_pdf*2.0;
-        
-        
-        scattering_pdf = cos_pdf;
     }
     
     return Scatter(

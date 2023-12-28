@@ -330,9 +330,9 @@ const bookscene = () =>
 
 const sceneGenerator = () => {
 
-    const { materials, spheres, quads, bg_color } = defaultScene();
+    // const { materials, spheres, quads, bg_color } = defaultScene();
     //const { materials, spheres, quads, bg_color } = ballsScene2();
-    // const { materials, spheres, quads, bg_color } = bookscene();
+    const { materials, spheres, quads, bg_color } = bookscene();
 
     const generateScene = () => {
 
