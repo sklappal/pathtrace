@@ -256,7 +256,8 @@ fn main(
 
     let pixelSize = 1.0/(params.textureSize.xy);
     // This is to initialize the random generator state
-    uv = (vec2f(global_invocation_id.xy) + vec2f(0.5, 0.5) + rand(params.time)) * pixelSize;
+    uv = (vec2f(global_invocation_id.xy) + vec2f(0.5, 0.5) + rand(params.time)*1000.0) * pixelSize;
+
     let aspectRatio = params.textureSize.x/params.textureSize.y;
 
     let lookfrom = vec3f(params.cameraPosition.x, params.cameraPosition.y, params.cameraPosition.z);
@@ -290,10 +291,6 @@ fn main(
     for (var i = 0; i < i32(params.samplesPerPixel); i++)
     {
       var noise = 2*rand_2() - vec2f(1.0);
-      if (i32(params.samplesPerPixel) == 1)
-      {
-        noise = vec2f(0.0, 0.0);
-      }
 
       let offset = f32(global_invocation_id.x) * pixel_delta_u + f32(global_invocation_id.y) * pixel_delta_v;
 
