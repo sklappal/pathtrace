@@ -4,6 +4,7 @@
 @group(0) @binding(2) var samp : sampler;
 @group(0) @binding(3) var outputTex : texture_storage_2d<rgba16float, write>;
 
+var<private> g_i_id: vec3u; 
 
 fn sphere_pdf_gen() -> vec3f
 {
@@ -68,10 +69,16 @@ fn scatter(ray : Ray, intersection : Intersection) -> Scatter
     }
     else
     {
-        const advanced_sampling = false;
+        const advanced_sampling = true;
         if (advanced_sampling)
         {
-            let light_amount = 0.5;
+            // let light_amount = select(
+            //     1.0,
+            //     0.5,
+            //     g_i_id.x < u32(params.textureSize.x/2)
+            // );
+            let light_amount = params.light_sampling_amount;
+            let light_index = pick_random_light();
             if (rand_1() > light_amount)
             {
                 let uvw = uvw_build_from(intersection.normal);
@@ -85,12 +92,12 @@ fn scatter(ray : Ray, intersection : Intersection) -> Scatter
             }
             else
             {
-                new_direction = random_towards_quad(intersection.position);
+                new_direction = random_towards_light(light_index, intersection.position);
             }
             attenuation = material.color;
             let cos_theta = dot(new_direction, intersection.normal);
             let cos_pdf = max(0.0, cos_theta/radians(180.0));
-            let light_pdf = light_pdf_value(intersection.position, new_direction);
+            let light_pdf = light_pdf_value(light_index, intersection.position, new_direction);
             pdf = light_amount*light_pdf + (1.0-light_amount)*cos_pdf*2.0;
             
             
@@ -146,10 +153,14 @@ fn ray_hits_objects(ray: Ray) -> Intersection
     return min_intersection;
 }
 
-
-fn random_towards_quad(origin: vec3f) -> vec3f
+fn pick_random_light() -> u32
 {
-    let quad = quads[0];
+    return u32(rand_1()*light_count);
+}
+
+fn random_towards_light(light_index: u32, origin: vec3f) -> vec3f
+{
+    let quad =  quads[lights[light_index].quad_index];
 
     let side1 = quad.corner2 - quad.corner1;
     let side2 = quad.corner3 - quad.corner1;
@@ -158,8 +169,8 @@ fn random_towards_quad(origin: vec3f) -> vec3f
     return normalize(point - origin);
 }
 
-fn light_pdf_value(origin: vec3f, dir: vec3f) -> f32 {
-    let quad = quads[0];
+fn light_pdf_value(light_index: u32, origin: vec3f, dir: vec3f) -> f32 {
+    let quad =  quads[lights[light_index].quad_index];
     let intersection = ray_quad_intersection(Ray(origin, dir), quad);
     if (!intersection.hit)
     {
@@ -273,7 +284,7 @@ fn main(
     let pixelSize = 1.0/(params.textureSize.xy);
     // This is to initialize the random generator state
     uv = (vec2f(global_invocation_id.xy) + vec2f(0.5, 0.5) + rand(params.time)*1000.0) * pixelSize;
-
+    g_i_id = global_invocation_id;
     let aspectRatio = params.textureSize.x/params.textureSize.y;
 
     let lookfrom = vec3f(params.cameraPosition.x, params.cameraPosition.y, params.cameraPosition.z);

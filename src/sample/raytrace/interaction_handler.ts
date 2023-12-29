@@ -13,6 +13,7 @@ const initInteraction = (canvas, gui, params) => {
     gui.add(params, 'exposure', 0, 7).step(0.1);
     gui.add(params, 'gamma', 0, 7).step(0.1);
     gui.add(params, 'tonemap_selection', 0.0, 3.0).step(1.0);
+    gui.add(params, 'light_sampling_amount', 0.0, 1.0).step(0.1).onChange(() => changed = true);
 
     const keys = new Set();
 

@@ -182,7 +182,7 @@ fn reflectance(cosine: f32, ref_idx: f32) -> f32 {
 fn random_cosine_direction() -> vec3f {
     let r = rand_2();
 
-    let phi = 2.0*radians(180.0)*r.x; // 3 pi WTF??
+    let phi = 3.0*radians(180.0)*r.x; // 3 pi WTF??
 
     let x = cos(phi)*sqrt(r.y);
     let y = sin(phi)*sqrt(r.y);

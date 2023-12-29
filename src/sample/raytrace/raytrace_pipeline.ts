@@ -125,7 +125,8 @@ const initRaytrace = async (device, hasTimestampQuery, params) => {
                 params.pitch,
                 params.yaw,
                 params.lightIntensity,
-                params.time])
+                params.time,
+                params.light_sampling_amount])
         );
     };
 

@@ -108,13 +108,13 @@ const toVec = v => `vec3f(${v[0]}, ${v[1]}, ${v[2]})`
 
 const defaultScene = () => {
     const materials = [
-        createLambertian([0.0, 0.1, 0.9]),
+        createLambertian([0.5, 0.5, 0.9]),
         createLambertian([0.6, 0.1, 0.9]),
         createMetal([1,1,1], 0.22),
         createDielectric(1.5),
-        createLight([1.0,1.0,0.2]),
-        createLight([1.0, 0.0, 0.1]),
-        createLight([0.1, 0.1, 0.8]),
+        createLight([1.0,0.2,0.2]),
+        createLight([0.2, 1.0, 0.2]),
+        createLight([0.2, 0.2, 1.0]),
     ];
 
     const spheres = [
@@ -328,11 +328,14 @@ const bookscene = () =>
     }
 }
 
+const quadToString = (q) => 
+    `Quad(${toVec(q.corner1)}, ${toVec(q.corner2)}, ${toVec(q.corner3)}, ${q.material_index})`
+
 const sceneGenerator = () => {
 
-    // const { materials, spheres, quads, bg_color } = defaultScene();
+    const { materials, spheres, quads, bg_color } = defaultScene();
     //const { materials, spheres, quads, bg_color } = ballsScene2();
-    const { materials, spheres, quads, bg_color } = bookscene();
+    // const { materials, spheres, quads, bg_color } = bookscene();
 
     const generateScene = () => {
 
@@ -353,7 +356,7 @@ const sceneGenerator = () => {
         if (quads.length > 0)
         {
             lines.push(`const quads = array<Quad, ${quads.length}>(`)
-            const quadStrings = quads.map(q => `Quad(${toVec(q.corner1)}, ${toVec(q.corner2)}, ${toVec(q.corner3)}, ${q.material_index}),`)
+            const quadStrings = quads.map(q => `${quadToString(q)},`)
             lines = lines.concat(quadStrings);
             lines.push(`);`);
         }
@@ -361,7 +364,16 @@ const sceneGenerator = () => {
             lines.push(`const quads = array<Quad, 1>();`);
         }
         lines.push(`const background_color = ${toVec(bg_color)};`);
-        // console.log(quads)
+        
+        const quad_lights = quads.map((q,i) => {return {quad: q, index: i}}).filter(qi => materials[qi.quad.material_index].type == materialTypes.diffuselight);
+
+        lines.push(`const light_count = ${quad_lights.length};`);
+        lines.push(`const lights = array<Light, ${quads.length}>(`)
+        const quad_light_strings = quad_lights.map(q => `Light(${q.index}),`);
+        lines = lines.concat(quad_light_strings)
+        lines.push(`);`);
+        
+
         return lines.join('\n')
     };
 

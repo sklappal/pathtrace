@@ -30,7 +30,8 @@ const init: SampleInit = async ({ canvas, pageState, gui }) => {
     time: 0.0,
     exposure: 4.0,
     gamma: 2.2,
-    tonemap_selection: 3.0
+    tonemap_selection: 3.0,
+    light_sampling_amount: 0.5,
   };
 
   let raytrace_pipeline = await initRaytrace(device, hasTimestampQuery, params);

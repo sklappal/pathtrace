@@ -6,7 +6,8 @@ struct Params {
   pitch: f32,
   yaw: f32,
   lightIntensity: f32,
-  time: f32
+  time: f32,
+  light_sampling_amount: f32
 }
 
 struct Ray {
@@ -39,6 +40,9 @@ struct Material {
   index_of_refraction: f32
 }
 
+struct Light {
+  quad_index: i32
+}
 
 struct Intersection {
   hit: bool,
