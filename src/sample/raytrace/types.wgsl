@@ -40,8 +40,12 @@ struct Material {
   index_of_refraction: f32
 }
 
+const QUAD: i32 = 0;
+const SPHERE: i32 = 1;
+
 struct Light {
-  quad_index: i32
+  light_type: i32, 
+  primitive_index: i32
 }
 
 struct Intersection {

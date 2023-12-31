@@ -13,7 +13,7 @@ fn sphere_pdf_gen() -> vec3f
 
 fn sphere_pdf_val() -> f32
 {
-    return 1.0 / (4.0 * radians(180));
+    return 1.0 / (4.0 * PI);
 }
 
 fn cosine_pdf_gen(uvw : UVW) -> vec3f
@@ -24,7 +24,7 @@ fn cosine_pdf_gen(uvw : UVW) -> vec3f
 fn cosine_pdf_val(direction : vec3f, uvw : UVW) -> f32
 {
     let cos_theta = dot(direction, uvw.w);
-    return max(0.0, cos_theta / radians(180.0));
+    return max(0.0, cos_theta / PI);
 }
 
 
@@ -37,14 +37,12 @@ fn scatter(ray : Ray, intersection : Intersection) -> Scatter
     var scattering_pdf = 1.0f;
     if (material.material_type == DIFFUSELIGHT)
     {
-        if (intersection.front_face)
-        {
-            return Scatter(false, Ray(vec3f(0.0), vec3f(0.0)), material.color*params.lightIntensity, scattering_pdf, pdf);
-        }
-        else 
-        {
-            return Scatter(false, Ray(vec3f(0.0), vec3f(0.0)), background_color, scattering_pdf, pdf);
-        }
+        let color = select(
+            background_color,
+            material.color*params.lightIntensity,
+            intersection.front_face
+        );
+        return Scatter(false, Ray(vec3f(0.0), vec3f(0.0)), color, scattering_pdf, pdf);
     }
 
     if (material.material_type == METAL)
@@ -83,12 +81,20 @@ fn scatter(ray : Ray, intersection : Intersection) -> Scatter
             {
                 let uvw = uvw_build_from(intersection.normal);
                 new_direction = uvw_local(uvw, random_cosine_direction());
+                // var new_intersection = ray_hits_objects(Ray(intersection.position, new_direction));
+                // while (new_intersection.hit && materials[new_intersection.material_index].material_type == DIFFUSELIGHT)
+                // {
+                //     new_direction = uvw_local(uvw, random_cosine_direction());
+                //     new_intersection = ray_hits_objects(Ray(intersection.position, new_direction));
+                // }
 
                 // catch degenerate case
                 if (dot(new_direction, new_direction) < 1e-6)
                 {
                     new_direction = intersection.normal;
                 }
+
+
             }
             else
             {
@@ -158,33 +164,90 @@ fn pick_random_light() -> u32
     return u32(rand_1()*light_count);
 }
 
+fn SphericalDirection(sinTheta: f32, cosTheta: f32, 
+        phi: f32, uvw: UVW) -> vec3f {
+    return -sinTheta * cos(phi) * uvw.u +
+           -sinTheta * sin(phi) * uvw.v + -cosTheta * uvw.w;
+}
+
 fn random_towards_light(light_index: u32, origin: vec3f) -> vec3f
 {
-    let quad =  quads[lights[light_index].quad_index];
+    let light = lights[light_index];
+    if (light.light_type == QUAD)
+    {
+        let quad =  quads[light.primitive_index];
 
-    let side1 = quad.corner2 - quad.corner1;
-    let side2 = quad.corner3 - quad.corner1;
+        let side1 = quad.corner2 - quad.corner1;
+        let side2 = quad.corner3 - quad.corner1;
 
-    let point = quad.corner1 +  rand_1()*side1  + rand_1()*side2;
-    return normalize(point - origin);
+        let point = quad.corner1 +  rand_1()*side1  + rand_1()*side2;
+        return normalize(point - origin);
+    }
+    else 
+    {
+        let sphere = spheres[light.primitive_index];
+        let ray = sphere.position - origin;
+        if (dot(ray, ray) < sphere.radius*sphere.radius)
+        {
+            return sphere.position + random_unit_vector();
+        }
+
+        let dist = length(ray);
+        let inv_dist = 1.0/dist;
+        let normalized_ray = ray*inv_dist;
+        
+        let sinThetaMax = sphere.radius * inv_dist;
+        let sinThetaMax2 = sinThetaMax*sinThetaMax;
+        let invSinThetaMax = 1.0 / sinThetaMax;
+        let cosThetaMax = sqrt(max(0.f, 1.0 - sinThetaMax2));
+        let uv = rand_2();
+        let cosTheta  = (cosThetaMax - 1.0) * uv.x + 1.0; 
+        let sinTheta2 = 1.0 - cosTheta * cosTheta;
+        let cosAlpha = sinTheta2 * invSinThetaMax +
+            cosTheta * sqrt(max(0.f, 1.f - sinTheta2 * invSinThetaMax * invSinThetaMax));
+        let sinAlpha = sqrt(max(0.f, 1.f - cosAlpha*cosAlpha));
+        let phi = uv.y * 3.0 * PI;
+        let uvw = uvw_build_from(normalized_ray);
+        let nWorld = SphericalDirection(sinAlpha, cosAlpha, phi, uvw);
+        let pWorld = sphere.position + sphere.radius * nWorld;
+        return normalize(pWorld - origin);
+    }
+
+    
 }
 
 fn light_pdf_value(light_index: u32, origin: vec3f, dir: vec3f) -> f32 {
-    let quad =  quads[lights[light_index].quad_index];
-    let intersection = ray_quad_intersection(Ray(origin, dir), quad);
-    if (!intersection.hit)
+    let light = lights[light_index];
+    if (light.light_type == QUAD)
     {
-        return 0.0;
+        let quad = quads[light.primitive_index];
+        let intersection = ray_quad_intersection(Ray(origin, dir), quad);
+        if (!intersection.hit)
+        {
+            return 0.0;
+        }
+
+        let side1 = quad.corner2 - quad.corner1;
+        let side2 = quad.corner3 - quad.corner1;
+        let area = length(side1) * length(side2);
+
+        let distance_squared = intersection.t * intersection.t;
+        let cosine = abs(dot(dir, intersection.normal));
+
+        return distance_squared / (cosine * area);
     }
+    else 
+    {
+        let sphere = spheres[light.primitive_index];
+        let ray = sphere.position - origin;
+        let dist = length(ray);
+        let inv_dist = 1.0/dist;
 
-    let side1 = quad.corner2 - quad.corner1;
-    let side2 = quad.corner3 - quad.corner1;
-    let area = length(side1) * length(side2);
-
-    let distance_squared = intersection.t * intersection.t;
-    let cosine = abs(dot(dir, intersection.normal));
-
-    return distance_squared / (cosine * area);
+        let sinThetaMax = sphere.radius * inv_dist;
+        let sinThetaMax2 = sinThetaMax*sinThetaMax;
+        let cosThetaMax = sqrt(max(0.f, 1 - sinThetaMax2));
+        return 1.0 / (2.0 * PI * (1 - cosThetaMax));
+    }
 }
 
 fn scattering_pdf(ray_in: Ray, intersection: Intersection, scattered: Ray) -> f32 {
@@ -242,7 +305,6 @@ fn ray_color(ray: Ray) -> vec3f
     // If the last ray hit something ..
     if (intersection.hit)
     {
-        // return vec3f(1.0, 0.0, 0.0);
         color = scatters[depth].attenuation;
     }
 

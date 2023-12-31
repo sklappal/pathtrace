@@ -1,6 +1,8 @@
 
 var<private> uv: vec2f = vec2f(0.0);
 
+const PI = 3.14159265;
+
 fn rand_1() -> f32 {
     return rand_3().x;
 }

@@ -121,13 +121,14 @@ const defaultScene = () => {
         createSphere([0.0, -40.0, 0.0], 39.0, 0),
         createSphere([0.0, 0.2, 0.0], 1.0, 1),
         createSphere([-2.0, 0.2, 0.0], 1.0, 2),
-        createSphere([2.0, 0.2, 0.0], 1.0, 3)
+        createSphere([2.0, 0.2, 0.0], 1.0, 3),
+        // createSphere([0.0, 3.0, -1.0], 1.0, 5)
     ]
 
     const quads = [
-        createQuad([-1.0, 3.0, -1.0], [1.0, 3.0, -1.0], [-1.0, 3.0, 1.0], 4),
+        // createQuad([-1.0, 3.0, -1.0], [1.0, 3.0, -1.0], [-1.0, 3.0, 1.0], 4),
         createQuad([-4.0, 3.0, -1.0], [-2.0, 3.0, -1.0], [-4.0, 3.0, 1.0], 5),
-        createQuad([2.0, 3.0, -1.0], [4.0, 3.0, -1.0], [2.0, 3.0, 1.0], 6),
+        // createQuad([2.0, 3.0, -1.0], [4.0, 3.0, -1.0], [2.0, 3.0, 1.0], 6),
     ]
 
     const bg_color = [0.0, 0.0, 0.0];
@@ -366,11 +367,14 @@ const sceneGenerator = () => {
         lines.push(`const background_color = ${toVec(bg_color)};`);
         
         const quad_lights = quads.map((q,i) => {return {quad: q, index: i}}).filter(qi => materials[qi.quad.material_index].type == materialTypes.diffuselight);
-
-        lines.push(`const light_count = ${quad_lights.length};`);
-        lines.push(`const lights = array<Light, ${quads.length}>(`)
-        const quad_light_strings = quad_lights.map(q => `Light(${q.index}),`);
+        const sphere_lights = spheres.map((s,i) => {return {sphere: s, index: i}}).filter(si => materials[si.sphere.material_index].type == materialTypes.diffuselight);
+        lines.push(`const light_count = ${quad_lights.length + sphere_lights.length};`);
+        lines.push(`const quad_light_count = ${quad_lights.length};`)
+        lines.push(`const lights = array<Light, light_count>(`)
+        const quad_light_strings = quad_lights.map(q => `Light(QUAD, ${q.index}),`);
         lines = lines.concat(quad_light_strings)
+        const sphere_light_strings = sphere_lights.map(s => `Light(SPHERE, ${s.index})`);
+        lines = lines.concat(sphere_light_strings)
         lines.push(`);`);
         
 
