@@ -75,25 +75,29 @@ fn scatter(ray : Ray, intersection : Intersection) -> Scatter
             //     0.5,
             //     g_i_id.x < u32(params.textureSize.x/2)
             // );
-            let light_amount = params.light_sampling_amount;
+            // var light_amount: f32;
+            // if (g_i_id.x < u32(params.textureSize.x/3.0))
+            // {
+            //     light_amount = 0.0;
+            // } else if (g_i_id.x < u32(2.0*params.textureSize.x/3.0))
+            // {
+            var    light_amount = params.light_sampling_amount;
+            // }
+            // else 
+            // {
+            //     light_amount = 1.0;
+            // }
+            // let light_amount = params.light_sampling_amount;
             let light_index = pick_random_light();
             if (rand_1() > light_amount)
             {
                 let uvw = uvw_build_from(intersection.normal);
                 new_direction = uvw_local(uvw, random_cosine_direction());
-                // var new_intersection = ray_hits_objects(Ray(intersection.position, new_direction));
-                // while (new_intersection.hit && materials[new_intersection.material_index].material_type == DIFFUSELIGHT)
-                // {
-                //     new_direction = uvw_local(uvw, random_cosine_direction());
-                //     new_intersection = ray_hits_objects(Ray(intersection.position, new_direction));
-                // }
 
-                // catch degenerate case
                 if (dot(new_direction, new_direction) < 1e-6)
                 {
                     new_direction = intersection.normal;
                 }
-
 
             }
             else
@@ -102,9 +106,9 @@ fn scatter(ray : Ray, intersection : Intersection) -> Scatter
             }
             attenuation = material.color;
             let cos_theta = dot(new_direction, intersection.normal);
-            let cos_pdf = max(0.0, cos_theta/radians(180.0));
+            let cos_pdf = max(0.0, cos_theta/PI);
             let light_pdf = light_pdf_value(light_index, intersection.position, new_direction);
-            pdf = light_amount*light_pdf + (1.0-light_amount)*cos_pdf*2.0;
+            pdf = light_amount*light_pdf + (1.0-light_amount)*cos_pdf;
             
             
             scattering_pdf = cos_pdf;
@@ -232,7 +236,7 @@ fn light_pdf_value(light_index: u32, origin: vec3f, dir: vec3f) -> f32 {
         let area = length(side1) * length(side2);
 
         let distance_squared = intersection.t * intersection.t;
-        let cosine = abs(dot(dir, intersection.normal));
+        let cosine = max(0.0, dot(-dir, intersection.normal));
 
         return distance_squared / (cosine * area);
     }

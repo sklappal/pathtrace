@@ -116,7 +116,7 @@ fn ray_quad_intersection(ray: Ray, quad: Quad) -> Intersection
     let normal = normalize(cross(side1, side2));
 
     let dott = dot(normal, ray.direction);
-    if (dott > 1e-4)
+    if (dott > -1e-3)
     {
         // Ray hits the plane from behind, treat as no-go
         // ray lies in the quad plane, treat as no-intersection

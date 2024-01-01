@@ -1,3 +1,4 @@
+import { clear } from 'console';
 import accumulateWGSL from './accumulate.wgsl';
 
 
@@ -91,18 +92,22 @@ const initAccumulate = (device, params, inputTexture) => {
             accumulationParameters.numSamples += 1;
         }
 
-        updateParams();
-        const computePass = commandEncoder.beginComputePass(computePassDescriptor);
-        computePass.setPipeline(accumulatePipeline);
-        computePass.setBindGroup(0, index % 2 == 1 ? computeBindGroup1 : computeBindGroup2);
+        if (params.sample_count < params.max_sample_count || clearAccumulation)
+        {
+            params.sample_count = params.samplesPerPixel * accumulationParameters.numSamples;
+            updateParams();
+            const computePass = commandEncoder.beginComputePass(computePassDescriptor);
+            computePass.setPipeline(accumulatePipeline);
+            computePass.setBindGroup(0, index % 2 == 1 ? computeBindGroup1 : computeBindGroup2);
 
-        computePass.dispatchWorkgroups(
-            Math.ceil(params.textureWidth / 16),
-            Math.ceil(params.textureHeight / 16)
-        );
-        computePass.end();
+            computePass.dispatchWorkgroups(
+                Math.ceil(params.textureWidth / 16),
+                Math.ceil(params.textureHeight / 16)
+            );
+            computePass.end();
 
-        index++;
+            index++;
+        }
     }
 
     return { accumulate, frameBuffer };

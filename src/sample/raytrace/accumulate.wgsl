@@ -20,8 +20,13 @@ fn main(@builtin(global_invocation_id) invocation_id : vec3u) {
     {
         sum = color;
     }
+    else 
+    {
+        let numSamples = f32(accumulationParams.numSamples);
+        sum = (color + (accumulated * (numSamples-1.0)))/numSamples;
+    }
     textureStore(curAccum, invocation_id.xy, vec4f(sum, 1));
-    textureStore(output, invocation_id.xy, vec4f(sum / f32(accumulationParams.numSamples), 1));
+    textureStore(output, invocation_id.xy, vec4f(sum, 1));
 
     // textureStore(output, invocation_id.xy, vec4f(color, 1));
 }

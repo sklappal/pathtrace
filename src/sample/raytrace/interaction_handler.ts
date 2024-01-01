@@ -14,6 +14,8 @@ const initInteraction = (canvas, gui, params) => {
     gui.add(params, 'gamma', 0, 7).step(0.1);
     gui.add(params, 'tonemap_selection', 0.0, 3.0).step(1.0);
     gui.add(params, 'light_sampling_amount', 0.0, 1.0).step(0.1).onChange(() => changed = true);
+    gui.add(params, 'sample_count').listen();
+    gui.add(params, 'max_sample_count', 0, 100000).step(1000).onChange(() => changed = true)
 
     const keys = new Set();
 
