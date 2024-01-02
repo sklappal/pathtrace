@@ -258,14 +258,15 @@ const ballsScene2 = () => {
                 }
                 else 
                 {
-                    quads = quads.concat(createBox(voxelCenter, [r(), r(), r()], material_index))
+                    if (materials[material_index].type != materialTypes.diffuselight)
+                        quads = quads.concat(createBox(voxelCenter, [r(), r(), r()], material_index, r()))
                 }
                 material_index++;
             }
         }
     }
     
-    materials.push(createLambertian([1.0, 1.0, 1.0]));
+    materials.push(createLambertian([0.4,0.4,0.4]));
     materials.push(createMetal([1.0, 1.0, 1.0], 0.0));
     materials.push(createMetal([1.0, 1.0, 1.0], 0.5));
     //material_index++
@@ -274,12 +275,12 @@ const ballsScene2 = () => {
     // Top (y = 3)
     quads.push(createQuad([3.0, 3.0, 3],[-3.0, 3.0, 3],[3.0, 3.0, -3],material_index))
     // Bottom (y = -3)
-    quads.push(createQuad([3.0, -3.0, 3],[3.0, -3.0, -3],[-3.0, -3.0, 3],material_index+1))
+    quads.push(createQuad([3.0, -3.0, 3],[3.0, -3.0, -3],[-3.0, -3.0, 3],material_index))
     
     // Left (x = -3)
-    quads.push(createQuad([-3.0, 3.0, 3],[-3.0, -3.0, 3],[-3.0, 3.0, -3],material_index+2))
+    quads.push(createQuad([-3.0, 3.0, 3],[-3.0, -3.0, 3],[-3.0, 3.0, -3],material_index))
     // right (x = 3)
-    quads.push(createQuad([3.0, 3.0, 3],[3.0, 3.0, -3],[3.0, -3.0, 3],material_index+2))
+    quads.push(createQuad([3.0, 3.0, 3],[3.0, 3.0, -3],[3.0, -3.0, 3],material_index    ))
     const bg_color = [0.0, 0.0, 0.0];
     return {
         materials, spheres, quads, bg_color
@@ -299,7 +300,7 @@ const bookscene = () =>
     for (let a = -11; a < 11; a++) {
         for (let b = -11; b < 11; b++) {
             let center = [ a + 0.9*r(), 0.2, b + 0.9*r()]
-            if (dist(center, [0, 0.2, 0]) > 2.9)
+            if (center[2] > 1 || center[2] < -1)
             {
                 let mat = r();
                 if (mat < 0.7)
@@ -327,17 +328,17 @@ const bookscene = () =>
 
     }
     materials.push(createDielectric(1.5));
-    spheres.push(createSphere([-5, 1, 0], 1.0, materials.length-1))
-    spheres.push(createSphere([-5, 1, 0], -0.9, materials.length-1))
+    spheres.push(createSphere([-2, 1, 0], 1.0, materials.length-1))
+    spheres.push(createSphere([-2, 1, 0], -0.9, materials.length-1))
 
     materials.push(createLight(randomColorG(), 0.1));
-    spheres.push(createSphere([-2, 1, 0], 1.0, materials.length-1))
+    spheres.push(createSphere([-5, 1, 0], 1.0, materials.length-1))
 
     materials.push(createLambertian([0.4, 0.2, 0.1]));
-    spheres.push(createSphere([1, 1, 0], 1.0, materials.length-1))
+    spheres.push(createSphere([4, 1, 0], 1.0, materials.length-1))
 
     materials.push(createMetal([0.7, 0.6, 0.5], 0.0));
-    spheres.push(createSphere([4, 1, 0], 1.0, materials.length-1))
+    spheres.push(createSphere([1, 1, 0], 1.0, materials.length-1))
     const quads = []
     // const bg_color = [0.5, 0.7, 1.0];
     const bg_color = [0.1, 0.1, 0.1];
@@ -385,12 +386,11 @@ const cornellBox = () =>
 const quadToString = (q) => 
     `Quad(${toVec(q.corner1)}, ${toVec(q.corner2)}, ${toVec(q.corner3)}, ${q.material_index})`
 
-const sceneGenerator = () => {
+const sceneGenerator = (id) => {
 
-    // const { materials, spheres, quads, bg_color } = defaultScene();
-    const { materials, spheres, quads, bg_color } = cornellBox();
-    //const { materials, spheres, quads, bg_color } = ballsScene2();
-    // const { materials, spheres, quads, bg_color } = bookscene();
+    const gens = [defaultScene, cornellBox, ballsScene2, bookscene]
+
+    const { materials, spheres, quads, bg_color } = gens[id-1]();
 
     const generateScene = () => {
 
@@ -437,8 +437,6 @@ const sceneGenerator = () => {
         const sphere_light_strings = sphere_lights.map(s => `Light(SPHERE, ${s.index}),`);
         lines = lines.concat(sphere_light_strings)
         lines.push(`);`);
-        console.log(lines);
-        
 
         return lines.join('\n')
     };

@@ -1,5 +1,5 @@
 
-const initInteraction = (canvas, gui, params) => {
+const initInteraction = (canvas, gui, params, changeScene) => {
 
     const devicePixelRatio = window.devicePixelRatio;
     canvas.width = params.textureWidth * devicePixelRatio
@@ -7,6 +7,7 @@ const initInteraction = (canvas, gui, params) => {
 
     let changed = false;
 
+    gui.add(params, 'scene', {'1': 1, '2': 2, '3': 3, '4': 4}).onChange(changeScene);
     gui.add(params, 'fov', 1, 140).step(1).onChange(() => changed = true);
     gui.add(params, 'lightIntensity', 1, 20).step(1).onChange(() => changed = true);
     gui.add(params, 'samplesPerPixel', 1, 20).step(1).onChange(() => changed = true);

@@ -243,6 +243,11 @@ fn light_pdf_value(light_index: u32, origin: vec3f, dir: vec3f) -> f32 {
     else 
     {
         let sphere = spheres[light.primitive_index];
+        let intersection = ray_sphere_intersection(Ray(origin, dir), sphere);
+        if (!intersection.hit)
+        {
+            return 0.0;
+        }
         let ray = sphere.position - origin;
         let dist = length(ray);
         let inv_dist = 1.0/dist;

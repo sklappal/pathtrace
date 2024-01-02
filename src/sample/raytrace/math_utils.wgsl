@@ -62,7 +62,7 @@ fn ray_sphere_intersection(ray: Ray, sphere: Sphere) -> Intersection
     let dott = dot(diff, ray.direction);
     let d = dott * dott - dot(diff, diff) + sphere.radius*sphere.radius;
 
-    if (d < 0.0)
+    if (d < 1e-3)
     {
       // no intersections
       return no_hit();

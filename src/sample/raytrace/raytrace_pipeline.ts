@@ -25,7 +25,7 @@ const initRaytrace = async (device, hasTimestampQuery, params) => {
       [imageBitmap.width, imageBitmap.height]
     );
 
-    const scene = sceneGenerator().generateScene()
+    const scene = sceneGenerator(params.scene).generateScene()
 
 
     const raytracePipeline = device.createComputePipeline({

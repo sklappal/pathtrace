@@ -33,8 +33,16 @@ const init: SampleInit = async ({ canvas, pageState, gui }) => {
     tonemap_selection: 3.0,
     light_sampling_amount: 0.5,
     sample_count: 0,
-    max_sample_count: 10000
+    max_sample_count: 10000,
+    scene: 1
   };
+
+  const changeScene = async () => {
+    raytrace_pipeline = await initRaytrace(device, hasTimestampQuery, params);
+    accumulate_pipeline = initAccumulate(device, params, raytrace_pipeline.frameBuffer);
+    tonemap_pipeline = initTonemap(device, params, accumulate_pipeline.frameBuffer);
+    display_results_pipeline = initDisplayResults(navigator, device, context, tonemap_pipeline.frameBuffer);
+  }
 
   let raytrace_pipeline = await initRaytrace(device, hasTimestampQuery, params);
 
@@ -44,7 +52,7 @@ const init: SampleInit = async ({ canvas, pageState, gui }) => {
 
   let display_results_pipeline = initDisplayResults(navigator, device, context, tonemap_pipeline.frameBuffer);
 
-  let interaction_handler = initInteraction(canvas, gui, params);
+  let interaction_handler = initInteraction(canvas, gui, params, changeScene);
 
   function frame() {
     params.time += 1.0;
