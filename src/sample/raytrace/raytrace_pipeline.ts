@@ -133,15 +133,19 @@ const initRaytrace = async (device, hasTimestampQuery, params) => {
     const raytrace = commandEncoder => {
         updateParams();
 
-        const computePass = commandEncoder.beginComputePass(computePassDescriptor);
-        computePass.setPipeline(raytracePipeline);
-        computePass.setBindGroup(0, computeBindGroup);
+        if (params.sample_count < params.max_sample_count)
+        {
 
-        computePass.dispatchWorkgroups(
-            Math.ceil(params.textureWidth / 16),
-            Math.ceil(params.textureHeight / 16)
-        );
-        computePass.end();
+            const computePass = commandEncoder.beginComputePass(computePassDescriptor);
+            computePass.setPipeline(raytracePipeline);
+            computePass.setBindGroup(0, computeBindGroup);
+
+            computePass.dispatchWorkgroups(
+                Math.ceil(params.textureWidth / 16),
+                Math.ceil(params.textureHeight / 16)
+            );
+            computePass.end();
+        }
     }
 
     let computePassDurationSum = 0;

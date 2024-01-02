@@ -357,13 +357,14 @@ const cornellBox = () =>
     materials.push(createLight([15, 15, 15]));
     materials.push(createMetal([1.0, 1.0, 1.0], 0.1))
     materials.push(createDielectric(1.5))
+    materials.push(createMetal([1.0, 1.0, 1.0], 0.5))
 
     let quads = [];
-    quads.push(createQuad([5.55,0,0], [5.55,0,5.55], [5.55,5.55,0], 2))
-
+    
     // Cornell box sides
+    quads.push(createQuad([5.55,0,0], [5.55,0,5.55], [5.55,5.55,0], 2))
     quads.push(createQuad([0,0,5.55], [0,0,0], [0,5.55,5.55], 0));
-    quads.push(createQuad([0,5.55,0], [5.55,5.55,0], [0,5.55,5.55], 1));
+    quads.push(createQuad([0,5.55,0], [5.55,5.55,0], [0,5.55,5.55], 6));
     quads.push(createQuad([0,0,5.55], [5.55,0,5.55], [0,0,0.0], 1));
     quads.push(createQuad([5.55,0,5.55], [0.0,0,5.55], [5.55,5.55,5.55], 1));
 
