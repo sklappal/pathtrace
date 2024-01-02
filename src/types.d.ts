@@ -27,4 +27,3 @@ declare module '*.wgsl' {
 }
 
 declare module 'stats-js';
-declare module 'stanford-dragon/4';

@@ -3,7 +3,6 @@ import { useRouter } from 'next/router';
 import { useEffect, useMemo, useRef, useState } from 'react';
 
 import type { GUI } from 'dat.gui';
-import type { Stats } from 'stats-js';
 import type { Editor, EditorConfiguration } from 'codemirror';
 interface CodeMirrorEditor extends Editor {
   updatedSource: (source: string) => void;
@@ -192,15 +191,6 @@ const SampleLayout: React.FunctionComponent<
         <meta httpEquiv="origin-trial" content={props.originTrial} />
       </Head>
       <div>
-        <h1>{props.name}</h1>
-        <a
-          target="_blank"
-          rel="noreferrer"
-          href={`https://github.com/${process.env.REPOSITORY_NAME}/tree/main/${props.filename}`}
-        >
-          See it on Github!
-        </a>
-        <p>{props.description}</p>
         {error ? (
           <>
             <p>
